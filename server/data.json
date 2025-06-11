@@ -1,0 +1,383 @@
+{
+  "users": [
+    {
+      "id": 0,
+      "username": "superadmin",
+      "password": "super123",
+      "role": "superadmin"
+    },
+    {
+      "id": 1749498708855,
+      "username": "Mauro Suthering",
+      "email": "mauingles@gmail.com",
+      "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocJ3UMgBJeOfHQf0mO9Mhkd5TiCSIO8wTUzNnG_wiPGw3-bSD33v=s96-c",
+      "uid": "MvkkevyS69d2Y7Kpr4Ff2P68doB2",
+      "role": "user",
+      "isGoogleUser": true,
+      "password": null
+    },
+    {
+      "id": 1749499060743,
+      "username": "papa",
+      "email": "papa@gmail.com",
+      "role": "superadmin",
+      "isGoogleUser": false
+    },
+    {
+      "id": 1749537267763,
+      "username": "papacho",
+      "email": "papacho@gmail.com",
+      "role": "admin",
+      "isGoogleUser": false
+    },
+    {
+      "id": 1749631385245,
+      "username": "eze",
+      "email": "eze@papa.com",
+      "role": "user",
+      "isGoogleUser": false
+    }
+  ],
+  "transactions": [
+    {
+      "type": "expense",
+      "category": "agua",
+      "description": "rr",
+      "amount": 11,
+      "user": "superadmin",
+      "date": "2024-12",
+      "createdAt": "9/6/2025",
+      "id": 1749478977707
+    },
+    {
+      "type": "expense",
+      "category": "electricidad",
+      "description": "Electricidad",
+      "amount": 20000,
+      "user": "superadmin",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 17:59",
+      "id": 1749484748744
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": null,
+      "description": "Ingreso",
+      "amount": 9,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 22:46",
+      "id": 1749501987171
+    },
+    {
+      "type": "expense",
+      "category": "otros",
+      "groupId": "group_1749499907525",
+      "description": "Otros",
+      "amount": 555,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 23:26",
+      "id": 1749504364451
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": 1749501897299,
+      "description": "Ingreso",
+      "amount": 87,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 23:34",
+      "id": 1749504873496
+    },
+    {
+      "type": "expense",
+      "category": "agua",
+      "groupId": null,
+      "description": "Agua",
+      "amount": 564,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 23:43",
+      "id": 1749505426326
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": "group_1749499907525",
+      "description": "Ingreso",
+      "amount": 44,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 23:46",
+      "id": 1749505573930
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": "group_1749499907525",
+      "description": "Ingreso",
+      "amount": 444,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 23:47",
+      "id": 1749505628680
+    },
+    {
+      "type": "expense",
+      "category": "alquiler",
+      "groupId": "group_1749499907525",
+      "description": "Alquiler",
+      "amount": 555,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 23:47",
+      "id": 1749505651587
+    },
+    {
+      "type": "expense",
+      "category": "internet",
+      "groupId": "group_1749499907525",
+      "description": "Internet",
+      "amount": 55,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "09/06/2025, 23:47",
+      "id": 1749505677993
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": null,
+      "description": "Ingreso",
+      "amount": 333,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "10/06/2025, 00:08",
+      "id": 1749506926824
+    },
+    {
+      "type": "expense",
+      "category": "electricidad",
+      "groupId": null,
+      "description": "Electricidad",
+      "amount": 4444,
+      "user": "papa",
+      "date": "2025-06",
+      "createdAt": "10/06/2025, 00:10",
+      "id": 1749507054156
+    },
+    {
+      "type": "expense",
+      "category": "electricidad",
+      "groupId": 1749537645448,
+      "description": "Electricidad",
+      "amount": 22,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "10/06/2025, 10:48",
+      "userId": 1749498708855,
+      "id": 1749545291328
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": 1749545324580,
+      "description": "Ingreso",
+      "amount": 1111,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "11/06/2025, 08:53",
+      "userId": 1749498708855,
+      "id": 1749624815793
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": null,
+      "description": "Ingreso",
+      "amount": 11,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "11/06/2025, 08:59",
+      "userId": 1749498708855,
+      "id": 1749625179562
+    },
+    {
+      "type": "expense",
+      "category": "internet",
+      "groupId": 1749545324580,
+      "description": "Internet",
+      "amount": 2111,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "11/06/2025, 09:05",
+      "userId": 1749498708855,
+      "id": 1749625544819
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": 1749545324580,
+      "description": "Ingreso",
+      "amount": 222,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "11/06/2025, 09:05",
+      "userId": 1749498708855,
+      "id": 1749625557143
+    },
+    {
+      "type": "expense",
+      "category": "otros",
+      "groupId": 1749545324580,
+      "description": "Otros",
+      "amount": 111,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "11/06/2025, 09:06",
+      "userId": 1749498708855,
+      "id": 1749625571375
+    },
+    {
+      "type": "expense",
+      "category": "alquiler",
+      "groupId": 1749545324580,
+      "description": "Alquiler",
+      "amount": 444,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "11/06/2025, 10:06",
+      "userId": 1749498708855,
+      "id": 1749629169046
+    },
+    {
+      "type": "income",
+      "category": "general",
+      "groupId": 1749631424750,
+      "description": "Ingreso",
+      "amount": 90,
+      "user": "Mauro Suthering",
+      "date": "2025-06",
+      "createdAt": "11/06/2025, 10:53",
+      "userId": 1749498708855,
+      "id": 1749632000160
+    }
+  ],
+  "groups": [
+    {
+      "id": "group_1749499907525",
+      "name": "casa",
+      "description": "mi casa",
+      "createdBy": "papa",
+      "createdAt": "2025-06-09T20:11:47.526Z",
+      "members": [
+        {
+          "id": 1749499060743,
+          "username": "papa",
+          "role": "creator"
+        }
+      ],
+      "inviteCode": "4BM3GJ18"
+    },
+    {
+      "id": 1749501897299,
+      "name": "trabajo",
+      "description": "",
+      "createdBy": 1749499060743,
+      "createdAt": "2025-06-09T20:44:57.299Z",
+      "inviteCode": "KAMSEPPC",
+      "members": [
+        {
+          "id": 1749499060743,
+          "username": "papa",
+          "role": "admin"
+        }
+      ]
+    },
+    {
+      "id": 1749537645448,
+      "name": "pedo",
+      "description": "",
+      "createdBy": 1749498708855,
+      "createdAt": "2025-06-10T06:40:45.448Z",
+      "inviteCode": "YGVRHLR3",
+      "members": [
+        {
+          "id": 1749498708855,
+          "username": "Mauro Suthering",
+          "role": "admin"
+        }
+      ],
+      "hiddenFor": []
+    },
+    {
+      "id": 1749545324580,
+      "name": "new",
+      "description": "",
+      "createdBy": 1749498708855,
+      "createdAt": "2025-06-10T08:48:44.580Z",
+      "inviteCode": "IL7PGBTU",
+      "members": [
+        {
+          "id": 1749498708855,
+          "username": "Mauro Suthering",
+          "role": "admin"
+        }
+      ],
+      "hiddenFor": []
+    },
+    {
+      "id": 1749631424750,
+      "name": "familia",
+      "description": "para nos",
+      "createdBy": 1749631385245,
+      "createdAt": "2025-06-11T08:43:44.750Z",
+      "inviteCode": null,
+      "members": [
+        {
+          "id": 1749631385245,
+          "username": "eze",
+          "role": "admin"
+        },
+        {
+          "id": 1749498708855,
+          "username": "Mauro Suthering",
+          "role": "member"
+        }
+      ]
+    },
+    {
+      "id": 1749640033970,
+      "name": "nuevo",
+      "description": "",
+      "createdBy": 1749498708855,
+      "createdAt": "2025-06-11T11:07:13.970Z",
+      "inviteCode": "8OCH4MDV",
+      "members": [
+        {
+          "id": 1749498708855,
+          "username": "Mauro Suthering",
+          "role": "admin"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "masterPassword": "admin123",
+    "selectedMonth": "2025-06",
+    "selectedGroup": null
+  },
+  "currentUser": {
+    "id": 1749498708855,
+    "username": "Mauro Suthering",
+    "email": "mauingles@gmail.com",
+    "photoURL": "https://lh3.googleusercontent.com/a/ACg8ocJ3UMgBJeOfHQf0mO9Mhkd5TiCSIO8wTUzNnG_wiPGw3-bSD33v=s96-c",
+    "uid": "MvkkevyS69d2Y7Kpr4Ff2P68doB2",
+    "role": "user",
+    "isGoogleUser": true,
+    "password": null
+  }
+}
