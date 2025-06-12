@@ -39,11 +39,8 @@ defineEmits(['close'])
 .modal-dialog {
   background: #ffffff;
   border-radius: 8px;
-  padding: 24px 12px 16px 16px;
-  min-width: 300px;
+  padding: 24px 32px 24px 32px;
   max-width: 90vw;
-  width: 100%;
-  max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.25);
@@ -57,8 +54,8 @@ defineEmits(['close'])
 
 .modal-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 0;
+  right: 0;
   background: none;
   border: none;
   cursor: pointer;

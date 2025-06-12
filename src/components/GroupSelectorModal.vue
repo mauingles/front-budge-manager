@@ -1,13 +1,13 @@
 <template>
   <div class="group-selector-modal">
-    <button @click="showModal = true" class="group-button">
+    <button @click="showModal = true" class="btn btn-group">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
-      <span>{{ selectedGroupName }}</span>
+     {{ selectedGroupName }}
     </button>
     
     <!-- Modal compacto usando BaseModal -->
@@ -102,43 +102,17 @@ const closeModal = () => {
   position: relative;
 }
 
-.group-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  height: 40px;
-  box-sizing: border-box;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 4px;
-  border: 1px solid #3b82f6;
-  border-radius: 8px;
+.btn-group {
+  border-color: #3b82f6;
   background: #eff6ff;
   color: #3b82f6;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  gap: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: 100%;
 }
 
-.group-button:hover {
+.btn-group:hover {
   border-color: #2563eb;
   background: #dbeafe;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
-
-.group-button span {
-  font-weight: 600;
-}
-
-
 
 .modal-content {
   max-width: 200px;

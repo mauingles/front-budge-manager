@@ -205,20 +205,6 @@ label {
   font-size: 14px;
 }
 
-.select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 16px;
-  background: white;
-}
-
-.select:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
 .toggle {
   text-align: center;
   margin-top: 16px;

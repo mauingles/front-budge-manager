@@ -164,42 +164,63 @@ onUnmounted(() => {
 
 .date-selector {
   position: relative;
+  width: 100%;
 }
 
 .date-button {
   display: flex;
   align-items: center;
-  padding: 10px 0px 10px 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
+  width: 100%;
+  padding: 9px 30px 9px 12px; /* Mismo padding que select */
+  border: 2px solid #e5e7eb; /* Mismo border que select */
+  border-radius: 6px; /* Mismo border-radius que select */
   background: white;
   color: #1e293b;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px; /* Mismo font-size que select */
+  font-weight: 400; /* Peso normal como select */
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 140px;
   justify-content: space-between;
-}
-
-.date-button:hover {
-  border-color: #cbd5e1;
+  font-family: inherit;
+  position: relativa;
+  /* Quitar estilos que lo diferenciaban */
+  min-width: auto;
+  box-shadow: none;
 }
 
 .date-button:focus {
   outline: none;
-  border-color: #1e293b;
-  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
 }
 
 .chevron-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px; /* Mismo tamaño que la flecha del select */
+  height: 16px;
   transition: transform 0.2s ease;
+  color: #6b7280; /* Mismo color que la flecha del select */
+  flex-shrink: 0;
+  position: absolute;
+  right: 10px;
 }
 
 .chevron-icon.rotate {
   transform: rotate(180deg);
+}
+
+/* Responsive ajustado para mantener consistencia */
+@media (max-width: 480px) {
+  .date-button {
+    padding: 12px 40px 12px 16px; /* Mantener mismo padding en móvil */
+    font-size: 16px; /* Mantener mismo tamaño de fuente */
+    font-weight: 400;
+    height: auto; /* Quitar altura fija */
+    border: 2px solid #e5e7eb; /* Mantener mismo border */
+    gap: 8px;
+  }
+  
+  .chevron-icon {
+    width: 16px !important; /* Mantener tamaño consistente */
+    height: 16px !important;
+  }
 }
 
 .date-picker-dropdown {
@@ -330,10 +351,6 @@ onUnmounted(() => {
     right: 0;
   }
   
-  .months-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
   .month-btn {
     padding: 14px 8px;
     font-size: 15px;
@@ -355,7 +372,6 @@ onUnmounted(() => {
     font-weight: 600;
     padding: 10px 4px;
     gap: 4px;
-    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     display: flex;
@@ -371,7 +387,6 @@ onUnmounted(() => {
   }
   
   .date-button span {
-    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
@@ -389,8 +404,6 @@ onUnmounted(() => {
     top: calc(100% + 2px);
     left: 0;
     right: 0;
-    width: 100%;
-    min-width: unset;
   }
   
   .months-grid {

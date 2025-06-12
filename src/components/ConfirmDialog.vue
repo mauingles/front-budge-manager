@@ -81,7 +81,7 @@ const handleCancel = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
+  z-index: 999999999999;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -89,7 +89,7 @@ const handleCancel = () => {
 .confirm-modal {
   background: #ffffff;
   border-radius: 6px;
-  padding: 12px 8px 12px 12px;
+  padding: 12px 24px 12px 24px;
   min-width: 240px;
   max-width: 90vw;
   width: auto;
@@ -106,8 +106,8 @@ const handleCancel = () => {
 
 .confirm-close {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 0;
+  right: 0;
   background: none;
   border: none;
   cursor: pointer;

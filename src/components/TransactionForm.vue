@@ -194,36 +194,6 @@ label {
   margin-bottom: 2px;
 }
 
-.select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 14px;
-  background: #ffffff;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  color: #1e293b;
-}
-
-.select:focus {
-  outline: none;
-  border-color: #1e293b;
-  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
-  transform: translateY(-1px);
-}
-
-.select:hover {
-  border-color: #cbd5e1;
-}
-
-.select:disabled {
-  background: #f8fafc;
-  border-color: #e2e8f0;
-  cursor: not-allowed;
-  color: #94a3b8;
-}
-
 .form-actions {
   margin-top: 8px;
   padding-top: 12px;
@@ -242,14 +212,7 @@ label {
   .field {
     gap: 8px;
   }
-  
-  .select {
-    padding: 12px 14px;
-    font-size: 15px;
-    width: 100%;
-    min-height: 44px;
-  }
-  
+    
   label {
     font-size: 14px;
   }
@@ -266,13 +229,7 @@ label {
   .field {
     gap: 8px;
   }
-  
-  .select {
-    padding: 14px 16px;
-    font-size: 16px;
-    min-height: 48px;
-    border-radius: 8px;
-  }
+
   
   label {
     font-size: 15px;

@@ -69,29 +69,6 @@ label {
   height: 18px;
 }
 
-.select {
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 16px;
-  background: white;
-  min-width: 180px;
-  font-weight: 500;
-  color: #1e293b;
-  transition: all 0.2s ease;
-}
-
-.select:focus {
-  outline: none;
-  border-color: #1e293b;
-  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
-  transform: translateY(-1px);
-}
-
-.select:hover {
-  border-color: #cbd5e1;
-}
-
 @media (max-width: 768px) {
   .month-selector {
     flex-direction: column;

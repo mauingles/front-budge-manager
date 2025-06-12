@@ -26,7 +26,15 @@
           </svg>
           Cambiar Contraseña
         </button>
-        
+
+        <button @click="handleLogout" class="logout action-compact">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16,17 21,12 16,7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          Cerrar Sesión
+        </button>
       </div>
     </div>
     
@@ -128,6 +136,11 @@ const getRoleLabel = (role) => {
     case 'user': return 'Permisos de: Usuario'
     default: return 'Permisos de: Usuario'
   }
+}
+
+const handleLogout = () => {
+  emit('logout');
+  emit('close')
 }
 
 const handleUsernameChange = () => {
@@ -467,5 +480,9 @@ const handlePasswordChange = () => {
   .compact-cancel, .compact-submit {
     width: 100%;
   }
+}
+
+.logout { 
+  color: red;
 }
 </style>

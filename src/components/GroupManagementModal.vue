@@ -671,20 +671,6 @@ label {
   font-size: 13px;
 }
 
-.select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 14px;
-  background: white;
-}
-
-.select:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
 small {
   color: #6b7280;
   font-size: 12px;

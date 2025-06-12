@@ -47,13 +47,6 @@
               <circle cx="12" cy="7" r="4"/>
             </svg>
           </button>
-          <button @click="handleLogout" class="btn btn-logout" title="Cerrar sesión">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16,17 21,12 16,7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </button>
         </div>
       </header>
       
@@ -110,7 +103,8 @@
       @change-password="handlePasswordChange"
       @change-username="handleUsernameChange"
       @reset-user-password="handleUserPasswordReset"
-      @delete-user="handleDeleteUser" />
+      @delete-user="handleDeleteUser"
+      @logout="handleLogout" />
     
     <GroupManagementModal 
       :show="showGroupManagementModal"
@@ -887,7 +881,7 @@ body {
   gap: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .header h1 {
@@ -990,27 +984,6 @@ body {
   grid-row: 1;
 }
 
-select {
-  padding: 9px 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  background: white;
-  color: #334155;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-select:hover {
-  border-color: #cbd5e1;
-}
-
-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
 h3 {
   margin: 0 0 20px 0;
   color: #0f172a;
@@ -1081,57 +1054,56 @@ h3 {
   
   .actions {
     display: grid;
-    grid-template-columns: 3fr 3fr 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 6px;
+    grid-template-columns: 1fr 1fr; /* Solo 2 columnas */
+    grid-template-rows: auto auto; /* 2 filas iniciales */
+    gap: 8px;
     width: 100%;
     align-items: stretch;
   }
   
-  /* Primera fila: Ingresos y Egresos expandidos, Users y Salir pequeños */
-  .actions > button:nth-child(1) { grid-column: 1; grid-row: 1; }
-  .actions > button:nth-child(2) { grid-column: 2; grid-row: 1; }
-  .actions > button:nth-child(6) { grid-column: 3; grid-row: 1; }
-  .actions > button:nth-child(7) { grid-column: 4; grid-row: 1; }
-  
-  /* Segunda fila: DatePicker, Selector Equipos, Equipos */
-  .actions > *:nth-child(4) { 
+  /* Primera fila: Solo Ingresos y Egresos */
+  .actions > button:nth-child(1) { /* Botón Ingresos */
     grid-column: 1; 
-    grid-row: 2;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-  .actions > *:nth-child(3) { 
-    grid-column: 2 / span 2; 
-    grid-row: 2;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-  .actions > button:nth-child(5) { grid-column: 4; grid-row: 2; }
-  
-  .btn {
-    padding: 10px 4px;
-    font-size: 0;
-    min-width: 40px;
-    height: 40px;
-    justify-content: center;
+    grid-row: 1; 
   }
   
-  /* Primera fila: Botones ingresos, egresos, users y salir del mismo tamaño */
-  .actions > button:nth-child(1),
-  .actions > button:nth-child(2),
-  .actions > button:nth-child(6),
-  .actions > button:nth-child(7) {
+  .actions > button:nth-child(2) { /* Botón Egresos */
+    grid-column: 2; 
+    grid-row: 1; 
+  }
+  
+  /* Segunda fila: DatePicker y GroupSelector */
+  .actions > *:nth-child(3) { /* GroupSelectorModal */
+    grid-column: 2; 
+    grid-row: 2; 
+  }
+  
+  .actions > *:nth-child(4) { /* DatePicker */
+    grid-column: 1; 
+    grid-row: 2; 
+  }
+  
+  /* Tercera fila: Equipos y Perfil */
+  .actions > button:nth-child(5) { /* Botón Equipos */
+    grid-column: 1; 
+    grid-row: 3; 
+  }
+  
+  .actions > button:nth-child(6) { /* Botón Perfil */
+    grid-column: 2; 
+    grid-row: 3; 
+  }
+  
+  /* Estilos para todos los botones en móvil */
+  .actions > button {
     width: 100%;
-    height: 40px;
+    height: 44px;
     min-width: 0;
     max-width: 100%;
-    padding: 10px 4px;
-    font-size: 11px;
+    padding: 10px 8px;
+    font-size: 12px;
     font-weight: 600;
-    gap: 4px;
+    gap: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1141,67 +1113,20 @@ h3 {
     white-space: nowrap;
   }
   
-  .actions > button:nth-child(1) svg,
-  .actions > button:nth-child(2) svg,
-  .actions > button:nth-child(6) svg,
-  .actions > button:nth-child(7) svg {
-    width: 14px !important;
-    height: 14px !important;
-  }
-  
-  /* Segunda fila: DatePicker, Selector equipos y Equipos del mismo tamaño */
-  .actions > *:nth-child(3),
-  .actions > *:nth-child(4) {
+  /* Estilos para los componentes (GroupSelector, DatePicker) */
+  .actions > *:not(button) {
     width: 100%;
-    height: 40px;
+    height: 44px;
     min-width: 0;
     max-width: 100%;
-    padding: 10px 4px;
-    font-size: 11px;
-    font-weight: 600;
-    gap: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     box-sizing: border-box;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   
-  .actions > *:nth-child(3) svg,
-  .actions > *:nth-child(4) svg {
-    width: 14px !important;
-    height: 14px !important;
-  }
-  
-  /* Botón equipos del mismo tamaño que la segunda fila */
-  .actions > button:nth-child(5) {
-    width: 100%;
-    height: 40px;
-    min-width: 0;
-    max-width: 100%;
-    padding: 10px 4px;
-    font-size: 11px;
-    font-weight: 600;
-    gap: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .actions > button:nth-child(5) svg {
-    width: 14px !important;
-    height: 14px !important;
-  }
-  
-  .btn svg {
+  /* Iconos más pequeños en móvil */
+  .actions svg {
     width: 16px !important;
     height: 16px !important;
+    flex-shrink: 0;
   }
   
   .dashboard {

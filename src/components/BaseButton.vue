@@ -1,6 +1,7 @@
 <template>
   <button class="btn" @click="$emit('click')">
-    <slot></slot>  </button>
+    <slot />
+  </button>
 </template>
 
 <script setup>
@@ -20,7 +21,11 @@ defineEmits(['click'])
   transition: all 0.2s;
   border: 1px solid transparent;
   min-height: 40px;
-  letter-spacing: 0.025em;
+  min-width: 200px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn:hover {
@@ -29,21 +34,10 @@ defineEmits(['click'])
   box-shadow: 0 8px 25px -8px rgba(30, 41, 59, 0.5);
 }
 
-.btn:active {
-  transform: translateY(0);
-}
-
 .btn:disabled {
   background: #94a3b8;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
-}
-
-@media (max-width: 768px) {
-  .btn {
-    width: 100%;
-    padding: 10px 20px;
-  }
 }
 </style>
