@@ -4,20 +4,32 @@
     <div v-if="type === 'expense'" class="field">
       <select v-model="category" class="select" required>
         <option value="">Seleccionar categoría...</option>
-        <option value="alquiler">🏠 Alquiler</option>
-        <option value="electricidad">⚡ Electricidad</option>
-        <option value="agua">💧 Agua</option>
-        <option value="gas">🔥 Gas</option>
-        <option value="internet">🌐 Internet</option>
-        <option value="seguro">🛡️ Seguro</option>
-        <option value="otros">📝 Otros</option>
+        <option value="alquiler">Alquiler</option>
+        <option value="electricidad">Electricidad</option>
+        <option value="agua">Agua</option>
+        <option value="gas">Gas</option>
+        <option value="internet">Internet</option>
+        <option value="telefono">Teléfono</option>
+        <option value="compra">Compra</option>
+        <option value="expensa">Expensa</option>
+        <option value="impuesto">Impuesto</option>
+        <option value="seguro">Seguro</option>
+        <option value="otros">Otros</option>
+      </select>
+    </div>
+    
+    <div v-if="type === 'income'" class="field">
+      <select v-model="category" class="select">
+        <option value="">Seleccionar categoría...</option>
+        <option value="nomina">Nómina</option>
+        <option value="otros">Otros</option>
       </select>
     </div>
     
     <div class="field">
-      <label>Grupo</label>
+      <label>Equipo</label>
       <select v-model="selectedGroup" class="select">
-        <option value="">Sin grupo</option>
+        <option value="">Sin equipo</option>
         <option v-for="group in availableGroups" :key="group.id" :value="group.id">
           {{ group.name }}
         </option>
@@ -131,7 +143,7 @@ const handleSubmit = () => {
   
   const transaction = {
     type: type.value,
-    category: category.value || 'general',
+    category: category.value || 'otros',
     groupId: selectedGroup.value || null,
     description: description.value || (type.value === 'income' ? 'Ingreso' : (category.value ? category.value.charAt(0).toUpperCase() + category.value.slice(1) : 'Gasto')),
     amount: parseFloat(amount.value),
@@ -220,23 +232,56 @@ label {
 
 @media (max-width: 768px) {
   .transaction-form {
-    gap: 12px;
-    min-width: 280px;
+    gap: 16px;
+    min-width: 300px;
+    max-width: 100%;
+    margin: 0;
+    width: 100%;
   }
   
   .field {
-    gap: 4px;
+    gap: 8px;
   }
   
   .select {
-    padding: 6px 10px;
-    font-size: 13px;
+    padding: 12px 14px;
+    font-size: 15px;
+    width: 100%;
+    min-height: 44px;
+  }
+  
+  label {
+    font-size: 14px;
   }
 }
 
 @media (max-width: 480px) {
   .transaction-form {
-    min-width: 260px;
+    min-width: 100%;
+    max-width: 100%;
+    padding: 0;
+    gap: 18px;
+  }
+  
+  .field {
+    gap: 8px;
+  }
+  
+  .select {
+    padding: 14px 16px;
+    font-size: 16px;
+    min-height: 48px;
+    border-radius: 8px;
+  }
+  
+  label {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  
+  .form-actions {
+    margin-top: 16px;
+    padding-top: 16px;
   }
 }
 </style>

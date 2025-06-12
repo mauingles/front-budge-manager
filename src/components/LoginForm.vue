@@ -130,15 +130,37 @@ const handleSubmit = async () => {
   
   try {
     if (isLogin.value) {
-      await loginWithEmail(email.value, password.value)
-      emit('login', { email: email.value })
+      // LOGIN: Solo Firebase para usuarios Google, directo para admin/superadmin
+      if (role.value === 'admin' || role.value === 'superadmin') {
+        // Login local para admin/superadmin
+        emit('login', { 
+          email: email.value, 
+          password: password.value 
+        })
+      } else {
+        // Login con Firebase para usuarios normales
+        await loginWithEmail(email.value, password.value)
+        emit('login', { email: email.value })
+      }
     } else {
-      await register(email.value, password.value)
-      emit('register', { 
-        email: email.value, 
-        role: role.value || 'user',
-        masterPassword: masterPassword.value 
-      })
+      // REGISTRO: Separar flujos
+      if (role.value === 'admin' || role.value === 'superadmin') {
+        // Registro manual para admin/superadmin (sin Firebase)
+        emit('register', { 
+          email: email.value, 
+          password: password.value,
+          role: role.value,
+          masterPassword: masterPassword.value 
+        })
+      } else {
+        // Registro con Firebase para usuarios normales
+        await register(email.value, password.value)
+        emit('register', { 
+          email: email.value, 
+          role: 'user',
+          masterPassword: masterPassword.value 
+        })
+      }
     }
   } catch (err) {
     error.value = authError.value || 'Error en la autenticación'

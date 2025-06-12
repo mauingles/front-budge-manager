@@ -43,13 +43,35 @@ const canEditTransaction = (transaction) => {
 const getGroupName = (groupId) => {
   if (!groupId || !props.groups) return null
   const group = props.groups.find(g => g.id === groupId)
-  return group ? group.name : 'Grupo desconocido'
+  return group ? group.name : 'Equipo desconocido'
 }
 </script>
 
 <style scoped>
 .list {
-  overflow: hidden;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  position: relative;
+}
+
+.list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .empty {
@@ -57,5 +79,23 @@ const getGroupName = (groupId) => {
   text-align: center;
   color: #6b7280;
   font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .list {
+    max-height: 300px;
+    padding-right: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .list {
+    max-height: 250px;
+    padding-right: 2px;
+  }
+  
+  .list::-webkit-scrollbar {
+    width: 4px;
+  }
 }
 </style>

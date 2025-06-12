@@ -3,30 +3,9 @@
     <div class="transaction-info">
       <h3>{{ description }}</h3>
       <div class="meta">
-        <span class="user">
-          <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          {{ user }}
-        </span>
-        <span class="date">
-          <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          {{ formatDate(date) }}
-        </span>
-        <span v-if="showGroup" class="group">
-          <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="m22 21-3-3 3-3"/>
-          </svg>
-          {{ groupName || 'Sin grupo' }}
-        </span>
+        <span class="user">{{ user }}</span>
+        <span class="date">{{ formatDate(date) }}</span>
+        <span v-if="showGroup" class="group">{{ groupName || 'Sin equipo' }}</span>
       </div>
     </div>
     <div class="transaction-actions">
@@ -34,25 +13,11 @@
         {{ type === 'income' ? '+' : '-' }}${{ amount }}
       </div>
       <div v-if="canEdit" class="admin-buttons">
-        <button 
-          @click.stop="$emit('edit')" 
-          class="edit-btn" 
-          title="Editar"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="m18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
+        <button @click.stop="$emit('edit')" class="edit-btn" title="Editar">
+          ✎
         </button>
-        <button 
-          @click.stop="$emit('delete')" 
-          class="delete-btn" 
-          title="Eliminar"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3,6 5,6 21,6"/>
-            <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
-          </svg>
+        <button @click.stop="$emit('delete')" class="delete-btn" title="Eliminar">
+          ✕
         </button>
       </div>
     </div>
@@ -81,76 +46,99 @@ defineEmits(['delete', 'edit'])
 
 <style scoped>
 .transaction {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #e2e8f0;
-  transition: background-color 0.2s;
+  align-items: flex-start;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  position: relative;
 }
 
 .transaction:hover {
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.9);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.1);
 }
 
 .transaction:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .transaction {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
+    padding: 14px;
+  }
+  
+  .transaction-info h3 {
+    font-size: 14px;
+  }
+  
+  .amount {
+    font-size: 15px;
+  }
+  
+  .meta {
+    gap: 10px;
+    font-size: 10px;
   }
 }
 
+.transaction-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .transaction-info h3 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  color: #0f172a;
+  margin: 0 0 6px 0;
+  font-size: 15px;
+  color: #1e293b;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .meta {
   display: flex;
-  gap: 16px;
-  font-size: 13px;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 11px;
   color: #64748b;
-}
-
-.user, .date, .group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.meta-icon {
-  width: 14px;
-  height: 14px;
-}
-
-@media (max-width: 640px) {
-  .meta {
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-}
-
-.group {
-  background: #f1f5f9;
-  color: #475569;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
   font-weight: 500;
 }
 
+.user, .date {
+  display: inline-block;
+}
+
+.group {
+  background: rgba(241, 245, 249, 0.8);
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+
+
+.transaction-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .amount {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  line-height: 1;
 }
 
 .amount.income {
@@ -161,70 +149,65 @@ defineEmits(['delete', 'edit'])
   color: #dc2626;
 }
 
-@media (max-width: 640px) {
-  .amount {
-    font-size: 20px;
+
+
+@media (max-width: 480px) {
+  .transaction {
+    padding: 12px;
+    flex-direction: column;
+    gap: 10px;
   }
-}
-
-.transaction-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-@media (max-width: 640px) {
+  
   .transaction-actions {
-    width: 100%;
+    flex-direction: row;
     justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  
+  .admin-buttons {
+    gap: 6px;
+  }
+  
+  .edit-btn, .delete-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
   }
 }
 
 .admin-buttons {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .edit-btn, .delete-btn {
-  background: none;
-  border: 1px solid #e2e8f0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  opacity: 0.8;
-  transition: all 0.2s;
-  min-width: 40px;
-  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.edit-btn svg, .delete-btn svg {
-  width: 16px;
-  height: 16px;
+  font-size: 11px;
+  transition: all 0.2s ease;
+  color: #64748b;
 }
 
 .edit-btn:hover {
-  opacity: 1;
-  background: #f1f5f9;
-  border-color: #94a3b8;
+  background: rgba(240, 249, 255, 0.9);
+  border-color: #3b82f6;
+  color: #3b82f6;
   transform: translateY(-1px);
-  color: #334155;
 }
 
 .delete-btn:hover {
-  opacity: 1;
-  background: #fef2f2;
-  border-color: #fca5a5;
+  background: rgba(254, 242, 242, 0.9);
+  border-color: #ef4444;
+  color: #ef4444;
   transform: translateY(-1px);
-  color: #dc2626;
 }
 
-@media (max-width: 640px) {
-  .edit-btn, .delete-btn {
-    min-width: 44px;
-    min-height: 44px;
-  }
-}
 </style>

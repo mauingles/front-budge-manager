@@ -29,11 +29,14 @@ googleProvider.setCustomParameters({
 })
 
 // Configurar para desarrollo local
-if (window.location.hostname === 'localhost') {
+if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
   googleProvider.setCustomParameters({
     ...googleProvider.customParameters,
     'hd': '' // Permite cualquier dominio
   })
+  
+  // Para debugging Firestore en desarrollo
+  console.log('🔧 Modo desarrollo detectado')
 }
 
 export default app

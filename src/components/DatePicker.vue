@@ -73,6 +73,8 @@ const initializeFromModelValue = () => {
 
 onMounted(() => {
   initializeFromModelValue()
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
 })
 
 // Observar cambios en modelValue
@@ -80,7 +82,17 @@ watch(() => props.modelValue, () => {
   initializeFromModelValue()
 })
 
+const isMobile = ref(false)
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 480
+}
+
 const formatSelectedDate = computed(() => {
+  // En móvil (480px o menos) mostrar mes y año
+  if (isMobile.value) {
+    return `${monthNames[selectedMonth.value - 1]} ${selectedYear.value}`
+  }
   return `${monthNames[selectedMonth.value - 1]} ${selectedYear.value}`
 })
 
@@ -122,6 +134,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleEscape)
+  window.removeEventListener('resize', checkMobile)
 })
 </script>
 
@@ -156,8 +169,7 @@ onUnmounted(() => {
 .date-button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  padding: 10px 0px 10px 12px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
   background: white;
@@ -192,14 +204,13 @@ onUnmounted(() => {
 
 .date-picker-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
-  z-index: 1000;
   padding: 12px;
   animation: slideDown 0.2s ease;
   min-width: 260px;
@@ -300,7 +311,6 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
 }
 
 @media (max-width: 768px) {
@@ -331,8 +341,56 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
+  .date-picker {
+    width: 100%;
+  }
+  
+  .date-button {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 40px;
+    box-sizing: border-box;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 10px 4px;
+    gap: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  
+  .date-button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .chevron-icon {
+    width: 12px !important;
+    height: 12px !important;
+    flex-shrink: 0;
+  }
+  
   .date-picker-dropdown {
     padding: 16px;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: unset;
   }
   
   .months-grid {

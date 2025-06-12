@@ -1,186 +1,134 @@
 <template>
   <AppLayout>
-    <!-- Indicador de carga -->
-    <div v-if="isLoading" class="loading">
-      <div class="loading-spinner"></div>
-      <p>Cargando datos...</p>
-    </div>
+    <div v-if="isLoading" class="loading">Cargando...</div>
+    <div v-if="!isOnline && !isLoading" class="offline">Sin conexión</div>
     
-    <!-- Indicador de estado de conexión solo cuando hay error -->
-    <div v-if="!isOnline && !isLoading" class="connection-status offline">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="status-icon">
-        <path d="m22 9-10 10L2 9"/>
-      </svg>
-      Sin conexión al servidor - {{ errorMessage }}
-    </div>
+    <LoginForm v-if="!currentUser && !authLoading" 
+      @login="handleLogin" 
+      @register="handleRegister"
+      @google-login="handleGoogleLogin" />
     
-    <!-- Pantalla de login si no está autenticado -->
-    <div v-if="!currentUser && !authLoading">
-      <LoginForm 
-        ref="loginForm"
-        @login="handleLogin" 
-        @register="handleRegister"
-        @google-login="handleGoogleLogin"
-      />
-    </div>
     
     <!-- App principal si está autenticado -->
     <div v-else-if="currentUser && !authLoading" class="main-app">
-      <!-- Header con info de usuario -->
-      <div class="user-header">
-        <div class="user-info">
-          <h1 class="app-title">Budget Manager</h1>
-        </div>
-        <div class="user-actions">
-          <button @click="openForm('income')" class="header-btn income-header-btn" title="Agregar Ingreso">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <header class="header">
+        <h1>Budget Manager</h1>
+        <div class="actions">
+          <button @click="openForm('income')" class="btn btn-income">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/>
               <polyline points="23,6 18,6 18,11"/>
             </svg>
             Ingresos
           </button>
-          <button @click="openForm('expense')" class="header-btn expense-header-btn" title="Agregar Gasto">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <button @click="openForm('expense')" class="btn btn-expense">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <polyline points="1,18 8.5,10.5 13.5,15.5 23,6"/>
               <polyline points="1,18 6,18 6,13"/>
             </svg>
-            Gastos
+            Egresos
           </button>
-          <button @click="openGroupModal" class="header-btn" title="Gestionar grupos">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <GroupSelectorModal 
+            v-model="selectedGroup" 
+            :available-groups="userGroups" 
+          />
+          <DatePicker v-model="selectedMonth" />
+          <button @click="openGroupModal" class="btn" title="Equipos">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
-            Grupos
           </button>
-          <div class="group-selector">
-            <select v-model="selectedGroup" class="group-select">
-              <option :value="null">Todos los grupos</option>
-              <option 
-                v-for="group in userGroups" 
-                :key="group.id" 
-                :value="group"
-              >
-                {{ group.name }}
-              </option>
-            </select>
-          </div>
-          <DatePicker v-model="selectedMonth" class="header-date-picker" />
-          <button @click="showUserModal = true" class="user-button" title="Perfil de usuario">
-            <svg class="user-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <button @click="showUserModal = true" class="btn" title="Perfil de usuario">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
           </button>
-          <button @click="handleLogout" class="logout-btn-small" title="Cerrar Sesión">
-            <svg class="btn-icon-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <button @click="handleLogout" class="btn btn-logout" title="Cerrar sesión">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16,17 21,12 16,7"/>
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
           </button>
         </div>
-      </div>
+      </header>
       
-      <!-- Layout de grid para desktop, stack para mobile -->
-      <div class="dashboard-grid">
-        
-        <!-- Columna derecha - Balance -->
-        <div class="balance-section">
-          <MonthlyBalance 
-            :total-income="totalIncome" 
-            :total-expenses="totalExpenses"
-            :selected-month="selectedMonth"
-            :selected-group="selectedGroup"
-          />
-        </div>
-        
-        <!-- Fila completa - Transacciones -->
-        <div class="transactions-section">
-          <BaseCard>
-            <h3 class="section-title">
-              <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14,2 14,8 20,8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10,9 9,9 8,9"/>
-              </svg>
-              {{ getTransactionsSectionTitle() }}
-            </h3>
-            <div class="transactions-container">
-              <TransactionList 
-                :transactions="filteredTransactions" 
-                :current-user="currentUser"
-                :has-group-access="hasGroupAccess"
-                :groups="groups"
-                :show-group-tags="!selectedGroup"
-                @edit="editTransaction"
-                @delete="deleteTransaction"
-              />
-            </div>
-          </BaseCard>
-        </div>
-      </div>
-      
-      <!-- Modal para agregar/editar -->
-      <BaseModal :show="showModal" @close="closeModal">
-        <h2>{{ getModalTitle() }}</h2>
-        <TransactionForm 
-          :initial-type="formType"
+      <div class="dashboard">
+        <MonthlyBalance 
+          :total-income="totalIncome" 
+          :total-expenses="totalExpenses"
           :selected-month="selectedMonth"
-          :current-user="currentUser?.username || currentUser?.email || currentUser?.displayName"
-          :editing-transaction="editingTransaction"
-          :is-editing="editing"
-          :available-groups="userGroups"
-          :preselected-group="selectedGroup"
-          @submit="saveTransaction" 
-        />
-      </BaseModal>
-      
-      <!-- Mensaje de éxito -->
-      <BaseAlert v-if="showSuccess">
-        ✅ Transacción guardada correctamente
-      </BaseAlert>
-      
-      <!-- Modal de usuario -->
-      <UserModal 
-        :show="showUserModal"
-        :current-user="currentUser"
-        :master-password="MASTER_PASSWORD"
-        :all-users="users"
-        @close="showUserModal = false"
-        @update-master="updateMasterPassword"
-        @change-password="handlePasswordChange"
-        @reset-user-password="handleUserPasswordReset"
-        @delete-user="handleDeleteUser"
-      />
-      
-      <!-- Modal de gestión de grupos -->
-      <GroupManagementModal 
-        :show="showGroupManagementModal"
-        :current-user="currentUser"
-        :user-groups="userGroups"
-        :all-groups="groups"
-        :all-users="users"
-        @close="showGroupManagementModal = false"
-        @create-group="handleCreateGroup"
-        @join-group="handleJoinGroup"
-        @remove-member="handleRemoveMember"
-        @generate-new-code="handleGenerateNewCode"
-        @leave-group="handleLeaveGroup"
-        @delete-group="handleDeleteGroup"
-        @hide-group="handleHideGroup"
-        @unhide-group="handleUnhideGroup"
-      />
+          :selected-group="selectedGroup" />
+        
+        <BaseCard>
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10,9 9,9 8,9"/>
+            </svg>
+            {{ getTransactionsSectionTitle() }}
+          </h3>
+          <TransactionList 
+            :transactions="filteredTransactions" 
+            :current-user="currentUser"
+            :has-group-access="hasGroupAccess"
+            :groups="groups"
+            :show-group-tags="!selectedGroup"
+            @edit="editTransaction"
+            @delete="deleteTransaction" />
+        </BaseCard>
+      </div>
     </div>
     
-    <!-- Contenedor de notificaciones -->
-    <NotificationContainer />
+    <BaseModal :show="showModal" @close="closeModal">
+      <h2>{{ getModalTitle() }}</h2>
+      <TransactionForm 
+        :initial-type="formType"
+        :selected-month="selectedMonth"
+        :current-user="currentUser?.username || currentUser?.email || currentUser?.displayName"
+        :editing-transaction="editingTransaction"
+        :is-editing="editing"
+        :available-groups="userGroups"
+        :preselected-group="selectedGroup"
+        @submit="saveTransaction" />
+    </BaseModal>
     
-    <!-- Dialog de confirmación -->
+    <UserModal 
+      :show="showUserModal"
+      :current-user="currentUser"
+      :master-password="MASTER_PASSWORD"
+      :all-users="users"
+      @close="showUserModal = false"
+      @update-master="updateMasterPassword"
+      @change-password="handlePasswordChange"
+      @change-username="handleUsernameChange"
+      @reset-user-password="handleUserPasswordReset"
+      @delete-user="handleDeleteUser" />
+    
+    <GroupManagementModal 
+      :show="showGroupManagementModal"
+      :current-user="currentUser"
+      :user-groups="userGroups"
+      :all-groups="groups"
+      :all-users="users"
+      @close="showGroupManagementModal = false"
+      @create-group="handleCreateGroup"
+      @join-group="handleJoinGroup"
+      @remove-member="handleRemoveMember"
+      @generate-new-code="handleGenerateNewCode"
+      @leave-group="handleLeaveGroup"
+      @delete-group="handleDeleteGroup"
+      @hide-group="handleHideGroup"
+      @unhide-group="handleUnhideGroup" />
+    
+    <NotificationContainer />
     <ConfirmDialog
       :show="confirmState.show"
       :title="confirmState.title"
@@ -190,25 +138,22 @@
       :type="confirmState.type"
       @confirm="handleConfirm"
       @cancel="handleCancel"
-      @close="closeConfirm"
-    />
+      @close="closeConfirm" />
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import AppLayout from './components/AppLayout.vue'
-import AppHeader from './components/AppHeader.vue'
 import MonthlyBalance from './components/MonthlyBalance.vue'
 import BaseCard from './components/BaseCard.vue'
 import TransactionList from './components/TransactionList.vue'
 import BaseModal from './components/BaseModal.vue'
 import TransactionForm from './components/TransactionForm.vue'
 import DatePicker from './components/DatePicker.vue'
-import BaseAlert from './components/BaseAlert.vue'
+import GroupSelectorModal from './components/GroupSelectorModal.vue'
 import LoginForm from './components/LoginForm.vue'
 import UserModal from './components/UserModal.vue'
-import GroupManager from './components/GroupManager.vue'
 import GroupManagementModal from './components/GroupManagementModal.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
@@ -217,13 +162,8 @@ import { useAuth } from '@/composables/useAuth.js'
 import { useNotifications } from '@/composables/useNotifications.js'
 import { useConfirm } from '@/composables/useConfirm.js'
 
-// Autenticación con Firebase
 const { user: firebaseUser, loading: authLoading, logout: firebaseLogout } = useAuth()
-
-// Notificaciones
 const { addNotification } = useNotifications()
-
-// Confirmaciones
 const { confirmState, confirm, handleConfirm, handleCancel, closeConfirm } = useConfirm()
 
 // Estado de conexión
@@ -238,15 +178,20 @@ const loginForm = ref(null)
 const MASTER_PASSWORD = ref('admin123')
 
 // Estado
-const selectedMonth = ref('2025-01')
-const selectedGroup = ref(null) // Grupo seleccionado actualmente
+const getCurrentMonth = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
+}
+const selectedMonth = ref(getCurrentMonth())
+const selectedGroup = ref(null) // Equipo seleccionado actualmente
 const transactions = ref([])
 const groups = ref([])
 
 const showModal = ref(false)
 const editing = ref(false)
 const editingTransaction = ref(null)
-const showSuccess = ref(false)
 const showUserModal = ref(false)
 const showGroupModal = ref(false)
 const showGroupManagementModal = ref(false)
@@ -261,13 +206,9 @@ const filteredTransactions = computed(() => {
   
   // FILTRO PRINCIPAL: Solo transacciones donde el usuario tiene acceso
   const userGroupIds = userGroups.value.map(g => g.id)
-  const isAdmin = currentUser.value.role === 'admin' || currentUser.value.role === 'superadmin'
   
-  // Filtrar por acceso del usuario
+  // Filtrar por acceso del usuario (TODOS los usuarios siguen las mismas reglas)
   filtered = filtered.filter(t => {
-    // Admins y SuperAdmins ven todo
-    if (isAdmin) return true
-    
     // Transacciones sin grupo: solo si fueron creadas por el usuario actual
     if (!t.groupId) {
       return t.userId === currentUser.value.id
@@ -305,12 +246,7 @@ const totalExpenses = computed(() =>
 const hasGroupAccess = (groupId) => {
   if (!currentUser.value || !groupId) return false
   
-  // Admin y SuperAdmin tienen acceso a todo
-  if (currentUser.value.role === 'admin' || currentUser.value.role === 'superadmin') {
-    return true
-  }
-  
-  // Verificar si es miembro del grupo
+  // TODOS los usuarios (incluyendo admin/superadmin) deben ser miembros del grupo
   const group = groups.value.find(g => g.id === groupId)
   return group?.members.some(member => member.id === currentUser.value?.id) || false
 }
@@ -318,20 +254,29 @@ const hasGroupAccess = (groupId) => {
 const userGroups = computed(() => {
   if (!currentUser.value) return []
   
-  // Admin y SuperAdmin ven todos los grupos
-  if (currentUser.value.role === 'admin' || currentUser.value.role === 'superadmin') {
-    return groups.value.filter(group => {
-      // No mostrar grupos ocultos para el usuario actual
-      return !group.hiddenFor || !group.hiddenFor.includes(currentUser.value.id)
-    })
-  }
+  console.log('🔍 USER GROUPS DEBUG:')
+  console.log('- Usuario actual:', currentUser.value.email, 'Role:', currentUser.value.role, 'ID:', currentUser.value.id, 'Tipo ID:', typeof currentUser.value.id)
+  console.log('- Total grupos en sistema:', groups.value.length)
+  console.log('- Todos los grupos:', groups.value.map(g => ({ name: g.name, id: g.id, members: g.members.map(m => ({ id: m.id, username: m.username })) })))
   
-  // Usuarios normales y de Google solo ven grupos donde son miembros y no están ocultos
-  return groups.value.filter(group => {
-    const isMember = group.members.some(member => member.id === currentUser.value?.id)
+  // TODOS los usuarios (incluyendo admin/superadmin) solo ven grupos donde son miembros
+  console.log('👤 Todos los usuarios - solo grupos donde son miembros')
+  const userFilteredGroups = groups.value.filter(group => {
+    console.log(`- Grupo "${group.name}":`)
+    console.log('  - members:', group.members)
+    console.log('  - currentUser.id:', currentUser.value?.id)
+    const isMember = group.members.some(member => {
+      console.log('    - member.id:', member.id, 'tipo:', typeof member.id)
+      console.log('    - currentUser.id:', currentUser.value?.id, 'tipo:', typeof currentUser.value?.id)
+      return member.id === currentUser.value?.id
+    })
     const isHidden = group.hiddenFor && group.hiddenFor.includes(currentUser.value.id)
+    console.log(`  - Es miembro: ${isMember}`)
+    console.log(`  - Está oculto: ${isHidden}`)
     return isMember && !isHidden
   })
+  console.log('- Grupos visibles para usuario:', userFilteredGroups.length)
+  return userFilteredGroups
 })
 
 // Funciones API
@@ -339,29 +284,34 @@ const loadData = async () => {
   try {
     isLoading.value = true
     errorMessage.value = ''
-    
     const data = await apiService.getAllData()
     
     users.value = data.users || []
     transactions.value = data.transactions || []
     groups.value = data.groups || []
     MASTER_PASSWORD.value = data.settings?.masterPassword || 'admin123'
-    selectedMonth.value = data.settings?.selectedMonth || '2025-01'
+    selectedMonth.value = getCurrentMonth()
+    selectedGroup.value = null
     
-    // Validar acceso al grupo guardado
-    const savedGroup = data.settings?.selectedGroup
-    if (savedGroup && currentUser.value) {
-      // Verificar si el usuario tiene acceso al grupo guardado
-      if (hasGroupAccess(savedGroup.id)) {
-        selectedGroup.value = savedGroup
-      } else {
-        selectedGroup.value = null // Reset si no tiene acceso
+    if (firebaseUser.value) {
+      let user = users.value.find(u => u.email === firebaseUser.value.email)
+      if (!user) {
+        user = {
+          id: Date.now(),
+          username: firebaseUser.value.displayName || firebaseUser.value.email.split('@')[0],
+          email: firebaseUser.value.email,
+          photoURL: firebaseUser.value.photoURL,
+          uid: firebaseUser.value.uid,
+          role: 'user',
+          isGoogleUser: true,
+          password: null
+        }
+        users.value.push(user)
       }
+      currentUser.value = user
     } else {
-      selectedGroup.value = null
+      currentUser.value = null
     }
-    
-    currentUser.value = data.currentUser || null
     
     isOnline.value = true
   } catch (error) {
@@ -376,15 +326,15 @@ const loadData = async () => {
 const saveData = async () => {
   try {
     const data = {
-      users: users.value,
-      transactions: transactions.value,
-      groups: groups.value,
+      users: users.value || [],
+      transactions: transactions.value || [],
+      groups: groups.value || [],
       settings: {
-        masterPassword: MASTER_PASSWORD.value,
-        selectedMonth: selectedMonth.value,
-        selectedGroup: selectedGroup.value
-      },
-      currentUser: currentUser.value
+        masterPassword: MASTER_PASSWORD.value || 'admin123',
+        selectedMonth: selectedMonth.value || getCurrentMonth(),
+        selectedGroup: selectedGroup.value || null
+      }
+      // currentUser removido - Firebase Auth maneja esto
     }
     
     await apiService.saveAllData(data)
@@ -468,9 +418,9 @@ const getModalTitle = () => {
 
 const getTransactionsSectionTitle = () => {
   if (selectedGroup.value) {
-    return `Transacciones grupo ${selectedGroup.value.name}`
+    return `Transacciones del Equipo ${selectedGroup.value.name}`
   }
-  return 'Transacciones'
+  return 'Todas las transacciones'
 }
 const saveTransaction = (transaction) => {
   // Agregar datos de usuario y grupo a la transacción
@@ -485,9 +435,7 @@ const saveTransaction = (transaction) => {
     const existingTransaction = transactions.value.find(t => t.id === editingTransaction.value.id)
     
     // Verificar si el usuario puede editar esta transacción
-    const canEdit = currentUser.value.role === 'admin' || 
-                   currentUser.value.role === 'superadmin' ||
-                   existingTransaction.userId === currentUser.value.id ||
+    const canEdit = existingTransaction.userId === currentUser.value.id ||
                    (existingTransaction.groupId && hasGroupAccess(existingTransaction.groupId))
     
     if (!canEdit) {
@@ -529,30 +477,9 @@ const saveTransaction = (transaction) => {
     addNotification(`${typeText.charAt(0).toUpperCase() + typeText.slice(1)} creado correctamente`, 'success', 2000)
   }
   
-  // Mostrar mensaje de éxito (mantenemos el existente también)
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
 }
 
 const editTransaction = (transaction) => {
-  // Verificar permisos de edición más estrictos
-  const isAdmin = currentUser.value?.role === 'admin' || currentUser.value?.role === 'superadmin'
-  const isOwner = transaction.userId === currentUser.value?.id
-  const hasGroupPermission = transaction.groupId ? hasGroupAccess(transaction.groupId) : false
-  
-  // Solo puede editar si:
-  // 1. Es admin/superadmin, O
-  // 2. Es el dueño de la transacción, O  
-  // 3. Es una transacción de grupo y tiene acceso al grupo
-  const canEdit = isAdmin || isOwner || (transaction.groupId && hasGroupPermission)
-  
-  if (!canEdit) {
-    addNotification('No tienes permisos para editar esta transacción', 'error')
-    return
-  }
-  
   editing.value = true
   editingTransaction.value = transaction
   formType.value = transaction.type
@@ -560,28 +487,9 @@ const editTransaction = (transaction) => {
 }
 
 const deleteTransaction = async (transactionId) => {
-  const transaction = transactions.value.find(t => t.id === transactionId)
-  if (!transaction) return
-  
-  // Verificar permisos de eliminación más estrictos
-  const isAdmin = currentUser.value?.role === 'admin' || currentUser.value?.role === 'superadmin'
-  const isOwner = transaction.userId === currentUser.value?.id
-  const hasGroupPermission = transaction.groupId ? hasGroupAccess(transaction.groupId) : false
-  
-  // Solo puede eliminar si:
-  // 1. Es admin/superadmin, O
-  // 2. Es el dueño de la transacción, O
-  // 3. Es una transacción de grupo y tiene acceso al grupo
-  const canDelete = isAdmin || isOwner || (transaction.groupId && hasGroupPermission)
-  
-  if (!canDelete) {
-    addNotification('No tienes permisos para eliminar esta transacción', 'error')
-    return
-  }
-  
   const confirmed = await confirm({
-    title: 'Eliminar Transacción',
-    message: '¿Estás seguro de que quieres eliminar esta transacción?',
+    title: 'Eliminar',
+    message: '¿Eliminar esta transacción?',
     confirmText: 'Eliminar',
     cancelText: 'Cancelar',
     type: 'danger'
@@ -590,11 +498,6 @@ const deleteTransaction = async (transactionId) => {
   if (confirmed) {
     transactions.value = transactions.value.filter(t => t.id !== transactionId)
     
-    // Mostrar mensaje de éxito
-    showSuccess.value = true
-    setTimeout(() => {
-      showSuccess.value = false
-    }, 3000)
   }
 }
 
@@ -636,6 +539,8 @@ const handleRegister = (userData) => {
   
   users.value.push(newUser)
   currentUser.value = newUser
+  
+  console.log('✅ Usuario manual creado:', newUser.email, 'Role:', newUser.role)
 }
 
 const handleGoogleLogin = () => {
@@ -677,11 +582,6 @@ const handleLogout = async () => {
 const updateMasterPassword = (newPassword) => {
   MASTER_PASSWORD.value = newPassword
   
-  // Mostrar mensaje de éxito
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
 }
 
 const handlePasswordChange = (passwordData) => {
@@ -697,11 +597,33 @@ const handlePasswordChange = (passwordData) => {
     users.value[userIndex].password = passwordData.newPassword
     currentUser.value.password = passwordData.newPassword
     
-    // Mostrar mensaje de éxito
-    showSuccess.value = true
-    setTimeout(() => {
-      showSuccess.value = false
-    }, 3000)
+  }
+}
+
+const handleUsernameChange = (newUsername) => {
+  // Actualizar nombre de usuario del usuario actual
+  const userIndex = users.value.findIndex(u => u.id === currentUser.value.id)
+  if (userIndex !== -1) {
+    users.value[userIndex].username = newUsername
+    currentUser.value.username = newUsername
+    
+    // Actualizar también en todas las transacciones del usuario
+    transactions.value.forEach(transaction => {
+      if (transaction.userId === currentUser.value.id || transaction.user === currentUser.value.username) {
+        transaction.user = newUsername
+      }
+    })
+    
+    // Actualizar en todos los grupos donde sea miembro
+    groups.value.forEach(group => {
+      const memberIndex = group.members.findIndex(m => m.id === currentUser.value.id)
+      if (memberIndex !== -1) {
+        group.members[memberIndex].username = newUsername
+      }
+    })
+    
+    addNotification('Nombre de usuario actualizado correctamente', 'success')
+    
   }
 }
 
@@ -716,11 +638,6 @@ const handleUserPasswordReset = (resetData) => {
       currentUser.value.password = resetData.newPassword
     }
     
-    // Mostrar mensaje de éxito
-    showSuccess.value = true
-    setTimeout(() => {
-      showSuccess.value = false
-    }, 3000)
   }
 }
 
@@ -748,11 +665,6 @@ const handleDeleteUser = (userId) => {
     !(t.userId === userId && !t.groupId) // Mantener transacciones de grupo
   )
   
-  // Mostrar mensaje de éxito
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
 }
 
 const closeModal = () => {
@@ -781,11 +693,6 @@ const handleCreateGroup = (groupData) => {
   
   groups.value.push(newGroup)
   
-  // Mostrar mensaje de éxito
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
 }
 
 const handleJoinGroup = (inviteCode) => {
@@ -798,7 +705,7 @@ const handleJoinGroup = (inviteCode) => {
   
   const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
   if (isAlreadyMember) {
-    addNotification('Ya eres miembro de este grupo', 'warning')
+    addNotification('Ya eres miembro de este equipo', 'warning')
     return
   }
   
@@ -812,13 +719,8 @@ const handleJoinGroup = (inviteCode) => {
   // INVALIDAR el código después del uso (un solo uso)
   group.inviteCode = null
   
-  // Mostrar mensaje de éxito
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
   
-  addNotification(`¡Te has unido al grupo "${group.name}"! El código de invitación ha sido invalidado.`, 'success')
+  addNotification(`¡Te has unido al equipo "${group.name}"! El código de invitación ha sido invalidado.`, 'success')
 }
 
 const handleRemoveMember = ({ groupId, memberId }) => {
@@ -827,11 +729,6 @@ const handleRemoveMember = ({ groupId, memberId }) => {
   
   group.members = group.members.filter(m => m.id !== memberId)
   
-  // Mostrar mensaje de éxito
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
 }
 
 const generateInviteCode = () => {
@@ -845,11 +742,6 @@ const handleGenerateNewCode = (groupId) => {
   // Generar nuevo código
   group.inviteCode = generateInviteCode()
   
-  // Mostrar mensaje de éxito
-  showSuccess.value = true
-  setTimeout(() => {
-    showSuccess.value = false
-  }, 3000)
 }
 
 const handleLeaveGroup = (groupId) => {
@@ -864,7 +756,7 @@ const handleLeaveGroup = (groupId) => {
     selectedGroup.value = null
   }
   
-  addNotification(`Has salido del grupo "${group.name}"`, 'success')
+  addNotification(`Has salido del equipo "${group.name}"`, 'success')
 }
 
 const handleDeleteGroup = (groupId) => {
@@ -929,9 +821,9 @@ const processInvitation = (inviteCode) => {
         username: currentUser.value.username,
         role: 'member'
       })
-      addNotification(`¡Te has unido al grupo "${group.name}"!`, 'success')
+      addNotification(`¡Te has unido al equipo "${group.name}"!`, 'success')
     } else {
-      addNotification('Ya eres miembro de este grupo', 'warning')
+      addNotification('Ya eres miembro de este equipo', 'warning')
     }
   } else {
     addNotification('Código de invitación inválido', 'error')
@@ -955,7 +847,7 @@ html, body {
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
   background-attachment: fixed;
   background-size: cover;
   color: #334155;
@@ -969,448 +861,387 @@ body {
   padding: 0;
 }
 
-h3 {
-  margin-bottom: 20px;
-  color: #0f172a;
-  font-weight: 600;
-  font-size: 1.125rem;
-}
-
-.main-app {
-  width: 100%;
-}
-
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 24px;
-  margin-top: 24px;
-}
-
-
-.selectors {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.group-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.group-selector label {
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
-}
-
-.group-selector .select {
-  width: 200px;
-  padding: 10px 12px;
-  border: 2px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 14px;
-  background: white;
-  color: #374151;
-}
-
-.group-selector .select:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
-.balance-section {
-  grid-column: 1 / -1;
-  grid-row: 1;
-}
-
-.transactions-section {
-  grid-column: 1 / -1;
-  grid-row: 2;
-}
-
-.transactions-container {
-  height: auto;
-  min-height: 60px;
-  max-height: 420px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-
-.username {
-  font-weight: 600;
-  color: #0f172a;
-}
-
-@media (max-width: 768px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
-    gap: 20px;
-  }
-  
-  .balance-section {
-    grid-column: 1;
-    grid-row: 1;
-  }
-  
-  .transactions-section {
-    grid-column: 1;
-    grid-row: 2;
-  }
-  
-  .transactions-container {
-    max-height: 350px;
-  }
-}
-
-@media (max-width: 480px) {
-  .transactions-container {
-    max-height: 300px;
-  }
-}
-
 .loading {
   text-align: center;
   padding: 40px;
+  color: white;
 }
 
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f4f6;
-  border-top: 4px solid #1e40af;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 16px;
+.offline {
+  background: #ef4444;
+  color: white;
+  padding: 12px;
+  text-align: center;
+  font-weight: 600;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
 }
 
-.connection-status {
-  padding: 12px 16px;
+.header h1 {
+  color: #0f172a;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  margin-bottom: 16px;
+  background: white;
+  color: #334155;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.connection-status {
+.btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn-income {
+  border-color: #10b981;
+  color: #10b981;
+  background: #ecfdf5;
+}
+
+.btn-income:hover {
+  background: #d1fae5;
+  border-color: #059669;
+}
+
+.btn-expense {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.btn-expense:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+.btn-logout {
+  border-color: #475569;
+  color: #334155;
+  background: #f8fafc;
+  width: auto !important;
+  max-width: 24px !important;
+  min-width: 24px !important;
+  padding: 8px 2px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-logout:hover {
+  background: #f1f5f9;
+  border-color: #334155;
+  color: #1e293b;
+}
+
+.dashboard {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  grid-template-rows: auto;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboard > *:first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.dashboard > *:last-child {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+select {
+  padding: 9px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: white;
+  color: #334155;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+select:hover {
+  border-color: #cbd5e1;
+}
+
+select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+h3 {
+  margin: 0 0 20px 0;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 1.125rem;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.status-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.connection-status.offline {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
-}
-
-.user-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background: #ffffff;
-  border-radius: 16px;
-  margin: 0 0 8px 0;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  width: 100%;
-}
-
 @media (max-width: 768px) {
-  .user-header {
+  .header {
     flex-direction: column;
-    gap: 12px;
     padding: 16px;
+    gap: 12px;
+    align-items: stretch;
   }
   
-}
-
-.user-info {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
-
-.app-title {
-  margin: 0;
-  color: #0f172a;
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.05em;
-}
-
-.user-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: 2px solid #e2e8f0;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  color: #334155;
-  min-width: 32px;
-  min-height: 32px;
-}
-
-.user-button:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
-}
-
-.user-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.header-btn {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-  letter-spacing: 0.025em;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.header-btn:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px -8px rgba(59, 130, 246, 0.4);
-}
-
-.header-btn:active {
-  transform: translateY(0);
-}
-
-.income-header-btn {
-  background: #10b981;
-}
-
-.income-header-btn:hover {
-  background: #059669;
-  box-shadow: 0 8px 25px -8px rgba(16, 185, 129, 0.4);
-}
-
-.expense-header-btn {
-  background: #ef4444;
-}
-
-.expense-header-btn:hover {
-  background: #dc2626;
-  box-shadow: 0 8px 25px -8px rgba(239, 68, 68, 0.4);
-}
-
-.header-date-picker {
-  /* DatePicker component will inherit its own styles */
-}
-
-.group-selector {
-  position: relative;
-}
-
-.group-select {
-  padding: 8px 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  background: white;
-  color: #1e293b;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 120px;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 8px center;
-  background-repeat: no-repeat;
-  background-size: 16px;
-  padding-right: 32px;
-}
-
-.group-select:hover {
-  border-color: #cbd5e1;
-}
-
-.group-select:focus {
-  outline: none;
-  border-color: #1e293b;
-  box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
-}
-
-@media (max-width: 768px) {
-  .user-actions {
+  .header h1 {
+    font-size: 1.5rem;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 8px;
     width: 100%;
+  }
+  
+  .actions > button:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .actions > button:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .actions > button:nth-child(3) { grid-column: 1; grid-row: 2; }
+  .actions > select:nth-child(4) { grid-column: 2; grid-row: 2; }
+  .actions > *:nth-child(5) { grid-column: 1; grid-row: 3; }
+  .actions > button:nth-child(6) { grid-column: 2; grid-row: 3; }
+  .actions > button:nth-child(7) { grid-column: 2; grid-row: 3; }
+  
+  .dashboard {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 100%;
+  }
+  
+  .btn {
+    padding: 12px 8px;
+    font-size: 13px;
+    min-width: 44px;
+    height: 44px;
     justify-content: center;
   }
 }
 
-.role {
-  background: #f8fafc;
-  color: #64748b;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  border: 1px solid #e2e8f0;
-  letter-spacing: 0.025em;
-}
-
-.role.google-user {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #fbbf24;
-}
-
-.user-details {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.add-group-btn {
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 12px 16px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-  letter-spacing: 0.025em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.add-group-btn:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px -8px rgba(59, 130, 246, 0.4);
-}
-
-.add-group-btn:active {
-  transform: translateY(0);
-}
-
-.logout-btn {
-  background: #64748b;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-  letter-spacing: 0.025em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logout-btn:hover {
-  background: #475569;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px -8px rgba(100, 116, 139, 0.4);
-}
-
-.logout-btn:active {
-  transform: translateY(0);
-}
-
-.logout-btn-small {
-  background: #64748b;
-  color: white;
-  border: none;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-}
-
-.logout-btn-small:hover {
-  background: #475569;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
-}
-
-.logout-btn-small:active {
-  transform: translateY(0);
-}
-
-.btn-icon-small {
-  width: 12px;
-  height: 12px;
-}
-
-.user-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.btn-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.section-icon {
-  width: 20px;
-  height: 20px;
-  margin-right: 8px;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  color: #1e293b;
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 24px;
-  letter-spacing: -0.025em;
-}
-
-@media (max-width: 640px) {
-  .logout-btn, .reset-btn {
-    padding: 8px 12px;
-    font-size: 13px;
+@media (max-width: 480px) {
+  .header {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .header h1 {
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+  }
+  
+  .actions {
+    display: grid;
+    grid-template-columns: 3fr 3fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 6px;
+    width: 100%;
+    align-items: stretch;
+  }
+  
+  /* Primera fila: Ingresos y Egresos expandidos, Users y Salir pequeños */
+  .actions > button:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .actions > button:nth-child(2) { grid-column: 2; grid-row: 1; }
+  .actions > button:nth-child(6) { grid-column: 3; grid-row: 1; }
+  .actions > button:nth-child(7) { grid-column: 4; grid-row: 1; }
+  
+  /* Segunda fila: DatePicker, Selector Equipos, Equipos */
+  .actions > *:nth-child(4) { 
+    grid-column: 1; 
+    grid-row: 2;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .actions > *:nth-child(3) { 
+    grid-column: 2 / span 2; 
+    grid-row: 2;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .actions > button:nth-child(5) { grid-column: 4; grid-row: 2; }
+  
+  .btn {
+    padding: 10px 4px;
+    font-size: 0;
+    min-width: 40px;
+    height: 40px;
+    justify-content: center;
+  }
+  
+  /* Primera fila: Botones ingresos, egresos, users y salir del mismo tamaño */
+  .actions > button:nth-child(1),
+  .actions > button:nth-child(2),
+  .actions > button:nth-child(6),
+  .actions > button:nth-child(7) {
+    width: 100%;
+    height: 40px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 10px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    gap: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .actions > button:nth-child(1) svg,
+  .actions > button:nth-child(2) svg,
+  .actions > button:nth-child(6) svg,
+  .actions > button:nth-child(7) svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  
+  /* Segunda fila: DatePicker, Selector equipos y Equipos del mismo tamaño */
+  .actions > *:nth-child(3),
+  .actions > *:nth-child(4) {
+    width: 100%;
+    height: 40px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 10px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    gap: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .actions > *:nth-child(3) svg,
+  .actions > *:nth-child(4) svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  
+  /* Botón equipos del mismo tamaño que la segunda fila */
+  .actions > button:nth-child(5) {
+    width: 100%;
+    height: 40px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 10px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    gap: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .actions > button:nth-child(5) svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  
+  .btn svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  
+  .dashboard {
+    padding: 8px;
+    gap: 16px;
+  }
+  
+  select {
+    font-size: 12px;
+    padding: 10px 8px;
+    min-width: unset;
+    height: 40px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+    color: #334155;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 32px;
+    position: relative;
+  }
+  
+  select:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 }
 </style>

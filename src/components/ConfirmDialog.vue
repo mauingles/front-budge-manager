@@ -81,7 +81,7 @@ const handleCancel = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100000;
+  z-index: 2;
   padding: 20px;
   box-sizing: border-box;
 }
@@ -89,7 +89,7 @@ const handleCancel = () => {
 .confirm-modal {
   background: #ffffff;
   border-radius: 6px;
-  padding: 12px;
+  padding: 12px 8px 12px 12px;
   min-width: 240px;
   max-width: 90vw;
   width: auto;
@@ -120,7 +120,6 @@ const handleCancel = () => {
   justify-content: center;
   width: 28px;
   height: 28px;
-  z-index: 10;
 }
 
 .confirm-close:hover {
@@ -189,14 +188,14 @@ const handleCancel = () => {
 }
 
 .primary-btn {
-  background: #3b82f6;
+  background: #64748b;
   color: white;
-  border-color: #3b82f6;
+  border-color: #64748b;
 }
 
 .primary-btn:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: #475569;
+  border-color: #475569;
 }
 
 .danger-btn {

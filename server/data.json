@@ -36,6 +36,14 @@
       "email": "eze@papa.com",
       "role": "user",
       "isGoogleUser": false
+    },
+    {
+      "id": 1749650641754,
+      "username": "pepito",
+      "email": "pepito@eze.com",
+      "password": "123456",
+      "role": "admin",
+      "isGoogleUser": false
     }
   ],
   "transactions": [

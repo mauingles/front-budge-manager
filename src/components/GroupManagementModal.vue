@@ -1,7 +1,7 @@
 <template>
   <BaseModal :show="show" @close="$emit('close')">
     <div class="group-management">
-      <h2>Gestión de Grupos</h2>
+      <h2>Gestión de Equipos</h2>
       
       <!-- Tabs -->
       <div class="tabs">
@@ -9,36 +9,36 @@
           :class="['tab', { active: activeTab === 'create' }]"
           @click="activeTab = 'create'"
         >
-          Crear Grupo
+          Crear Equipo
         </button>
         <button 
           :class="['tab', { active: activeTab === 'join' }]"
           @click="activeTab = 'join'"
         >
-          Unirse a Grupo
+          Unirse a Equipo
         </button>
         <button 
           :class="['tab', { active: activeTab === 'invite' }]"
           @click="activeTab = 'invite'"
         >
-          Invitar Usuarios
+          Invitar a Equipo
         </button>
         <button 
           :class="['tab', { active: activeTab === 'manage' }]"
           @click="activeTab = 'manage'"
         >
-          Mis Grupos
+          Mis Equipos
         </button>
       </div>
 
       <!-- Tab Content -->
       <div class="tab-content">
         
-        <!-- Crear Grupo -->
+        <!-- Crear Equipo -->
         <div v-if="activeTab === 'create'" class="create-group">
           <form @submit.prevent="createGroup" class="form">
             <div class="field">
-              <label>Nombre del Grupo</label>
+              <label>Nombre del Equipo</label>
               <BaseInput 
                 v-model="newGroupName" 
                 placeholder="Ej: Familia, Trabajo, Amigos..."
@@ -49,16 +49,16 @@
               <label>Descripción (opcional)</label>
               <BaseInput 
                 v-model="newGroupDescription" 
-                placeholder="Descripción del grupo..."
+                placeholder="Descripción del equipo..."
               />
             </div>
             <BaseButton type="submit" :disabled="!newGroupName.trim()">
-              Crear Grupo
+              Crear Equipo
             </BaseButton>
           </form>
         </div>
 
-        <!-- Unirse a Grupo -->
+        <!-- Unirse a Equipo -->
         <div v-if="activeTab === 'join'" class="join-group">
           <form @submit.prevent="joinGroup" class="form">
             <div class="field">
@@ -68,22 +68,22 @@
                 placeholder="Ingresa el código de invitación"
                 required
               />
-              <small>Pide el código de invitación al administrador del grupo</small>
+              <small>Pide el código de invitación al administrador del equipo</small>
             </div>
             <BaseButton type="submit" :disabled="!inviteCode.trim()">
-              Unirse al Grupo
+              Unirse al Equipo
             </BaseButton>
           </form>
         </div>
 
-        <!-- Invitar Usuarios -->
+        <!-- Invitar a Equipo -->
         <div v-if="activeTab === 'invite'" class="invite-users">
           
           <!-- Selector de Grupo -->
           <div class="field">
-            <label>Seleccionar Grupo</label>
+            <label>Seleccionar Equipo</label>
             <select v-model="selectedGroupForInvite" class="select" required>
-              <option value="">Selecciona un grupo...</option>
+              <option value="">Selecciona un equipo...</option>
               <option 
                 v-for="group in ownedGroups" 
                 :key="group.id" 
@@ -94,12 +94,12 @@
             </select>
           </div>
 
-          <!-- Información del grupo seleccionado -->
+          <!-- Información del equipo seleccionado -->
           <div v-if="selectedGroupForInvite" class="group-info">
             <div class="invite-message">
               <label>Mensaje de Invitación:</label>
               <div class="invitation-text">
-                Te invito a participar en la app <strong>BUDGET MANAGER</strong> de mi grupo <strong>"{{ selectedGroupForInvite.name }}"</strong>, utilizando este código <span v-if="selectedGroupForInvite.inviteCode" class="code-inline clickable-code" @click="copyCode" title="Copiar código">{{ selectedGroupForInvite.inviteCode }}</span><span v-else class="no-code-inline">sin código activo</span>
+                Te invito a participar en la app <strong>BUDGET MANAGER</strong> de mi equipo <strong>"{{ selectedGroupForInvite.name }}"</strong>, utilizando este código <span v-if="selectedGroupForInvite.inviteCode" class="code-inline clickable-code" @click="copyCode" title="Copiar código">{{ selectedGroupForInvite.inviteCode }}</span><span v-else class="no-code-inline">sin código activo</span>
               </div>
               <div v-if="selectedGroupForInvite.inviteCode" class="code-actions">
                 <button 
@@ -147,11 +147,11 @@
           </div>
         </div>
 
-        <!-- Mis Grupos -->
+        <!-- Mis Equipos -->
         <div v-if="activeTab === 'manage'" class="manage-groups">
           
           <div v-if="allUserGroups.length === 0" class="no-groups">
-            <p>No perteneces a ningún grupo todavía.</p>
+            <p>No perteneces a ningún equipo todavía.</p>
           </div>
           
           <div v-else class="groups-list">
@@ -168,7 +168,7 @@
                     v-if="isGroupHidden(group)"
                     @click="unhideGroup(group.id)"
                     class="unhide-group-btn"
-                    title="Mostrar grupo"
+                    title="Mostrar equipo"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 14px; height: 14px; margin-right: 4px;">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
@@ -180,7 +180,7 @@
                     v-else
                     @click="hideGroup(group.id)"
                     class="hide-group-btn"
-                    title="Ocultar grupo"
+                    title="Ocultar equipo"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 14px; height: 14px; margin-right: 4px;">
                       <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
@@ -196,7 +196,7 @@
                     v-if="isGroupCreator(group) && !isGroupHidden(group)"
                     @click="deleteGroup(group.id)"
                     class="delete-group-btn"
-                    title="Eliminar grupo"
+                    title="Eliminar equipo"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 14px; height: 14px; margin-right: 4px;">
                       <polyline points="3,6 5,6 21,6"/>
@@ -212,7 +212,7 @@
                     v-if="!isGroupCreator(group) && !isGroupHidden(group)"
                     @click="leaveGroup(group.id)"
                     class="leave-group-btn"
-                    title="Salir del grupo"
+                    title="Salir del equipo"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 14px; height: 14px; margin-right: 4px;">
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -281,7 +281,7 @@
               v-if="canRemoveMember(member)"
               @click="removeMemberFromDetail(selectedGroupForMembers.id, member.id)"
               class="remove-member-btn"
-              title="Remover del grupo"
+              title="Remover del equipo"
             >
               ✕ Remover
             </button>
@@ -373,7 +373,7 @@ const createGroup = () => {
   // Reset form
   newGroupName.value = ''
   newGroupDescription.value = ''
-  showMessage('Grupo creado exitosamente', 'success')
+  showMessage('Equipo creado exitosamente', 'success')
 }
 
 const joinGroup = () => {
@@ -385,7 +385,7 @@ const joinGroup = () => {
 
 const copyInvitationMessage = async () => {
   try {
-    const message = `Te invito a participar en la app BUDGET MANAGER de mi grupo "${selectedGroupForInvite.value.name}", utilizando este código ${selectedGroupForInvite.value.inviteCode}`
+    const message = `Te invito a participar en la app BUDGET MANAGER de mi equipo "${selectedGroupForInvite.value.name}", utilizando este código ${selectedGroupForInvite.value.inviteCode}`
     await navigator.clipboard.writeText(message)
     showMessage('Mensaje de invitación copiado al portapapeles', 'success')
   } catch (err) {
@@ -411,7 +411,7 @@ const canRemoveMember = (member) => {
   // Admins globales pueden remover cualquiera
   if (props.currentUser.role === 'admin' || props.currentUser.role === 'superadmin') return true
   
-  // Admin del grupo puede remover miembros normales
+  // Admin del equipo puede remover miembros normales
   const currentUserMember = selectedGroupForInvite.value.members.find(m => m.id === props.currentUser.id)
   return currentUserMember?.role === 'admin' && member.role !== 'admin'
 }
@@ -426,7 +426,7 @@ const removeMember = (memberId) => {
     groupId: selectedGroupForInvite.value.id,
     memberId
   })
-  showMessage('Miembro removido del grupo', 'success')
+  showMessage('Miembro removido del equipo', 'success')
 }
 
 const isGroupCreator = (group) => {
@@ -446,8 +446,8 @@ const leaveGroup = async (groupId) => {
     if (!group) return
     
     const confirmed = await confirm({
-      title: 'Salir del Grupo',
-      message: `¿Estás seguro de que quieres salir del grupo "${group.name}"?`,
+      title: 'Salir del Equipo',
+      message: `¿Estás seguro de que quieres salir del equipo "${group.name}"?`,
       confirmText: 'Salir',
       cancelText: 'Cancelar',
       type: 'danger'
@@ -455,11 +455,11 @@ const leaveGroup = async (groupId) => {
     
     if (confirmed) {
       emit('leave-group', groupId)
-      showMessage(`Has salido del grupo "${group.name}"`, 'success')
+      showMessage(`Has salido del equipo "${group.name}"`, 'success')
     }
   } catch (error) {
-    console.error('Error al salir del grupo:', error)
-    showMessage('Error al salir del grupo', 'error')
+    console.error('Error al salir del equipo:', error)
+    showMessage('Error al salir del equipo', 'error')
   }
 }
 
@@ -469,8 +469,8 @@ const hideGroup = async (groupId) => {
     if (!group) return
     
     const confirmed = await confirm({
-      title: 'Ocultar Grupo',
-      message: `¿Estás seguro de que quieres ocultar el grupo "${group.name}"? El grupo seguirá existiendo pero no será visible para ti.`,
+      title: 'Ocultar Equipo',
+      message: `¿Estás seguro de que quieres ocultar el equipo "${group.name}"? El equipo seguirá existiendo pero no será visible para ti.`,
       confirmText: 'Ocultar',
       cancelText: 'Cancelar',
       type: 'info'
@@ -478,11 +478,11 @@ const hideGroup = async (groupId) => {
     
     if (confirmed) {
       emit('hide-group', groupId)
-      showMessage(`Grupo "${group.name}" ocultado`, 'success')
+      showMessage(`Equipo "${group.name}" ocultado`, 'success')
     }
   } catch (error) {
-    console.error('Error al ocultar grupo:', error)
-    showMessage('Error al ocultar el grupo', 'error')
+    console.error('Error al ocultar equipo:', error)
+    showMessage('Error al ocultar el equipo', 'error')
   }
 }
 
@@ -492,8 +492,8 @@ const unhideGroup = async (groupId) => {
     if (!group) return
     
     const confirmed = await confirm({
-      title: 'Mostrar Grupo',
-      message: `¿Estás seguro de que quieres mostrar el grupo "${group.name}"?`,
+      title: 'Mostrar Equipo',
+      message: `¿Estás seguro de que quieres mostrar el equipo "${group.name}"?`,
       confirmText: 'Mostrar',
       cancelText: 'Cancelar',
       type: 'info'
@@ -501,11 +501,11 @@ const unhideGroup = async (groupId) => {
     
     if (confirmed) {
       emit('unhide-group', groupId)
-      showMessage(`Grupo "${group.name}" ahora es visible`, 'success')
+      showMessage(`Equipo "${group.name}" ahora es visible`, 'success')
     }
   } catch (error) {
-    console.error('Error al mostrar grupo:', error)
-    showMessage('Error al mostrar el grupo', 'error')
+    console.error('Error al mostrar equipo:', error)
+    showMessage('Error al mostrar el equipo', 'error')
   }
 }
 
@@ -515,8 +515,8 @@ const deleteGroup = async (groupId) => {
     if (!group) return
     
     const confirmed = await confirm({
-      title: 'Eliminar Grupo',
-      message: `¿Estás seguro de que quieres eliminar el grupo "${group.name}"? Esta acción no se puede deshacer y se eliminarán todas las transacciones del grupo.`,
+      title: 'Eliminar Equipo',
+      message: `¿Estás seguro de que quieres eliminar el equipo "${group.name}"? Esta acción no se puede deshacer y se eliminarán todas las transacciones del equipo.`,
       confirmText: 'Eliminar',
       cancelText: 'Cancelar',
       type: 'danger'
@@ -524,11 +524,11 @@ const deleteGroup = async (groupId) => {
     
     if (confirmed) {
       emit('delete-group', groupId)
-      showMessage(`Grupo "${group.name}" eliminado`, 'success')
+      showMessage(`Equipo "${group.name}" eliminado`, 'success')
     }
   } catch (error) {
-    console.error('Error al eliminar grupo:', error)
-    showMessage('Error al eliminar el grupo', 'error')
+    console.error('Error al eliminar equipo:', error)
+    showMessage('Error al eliminar el equipo', 'error')
   }
 }
 
@@ -560,7 +560,7 @@ const canManageMember = (member, group) => {
   // Admins globales pueden gestionar cualquiera
   if (props.currentUser.role === 'admin' || props.currentUser.role === 'superadmin') return true
   
-  // Admin del grupo puede gestionar miembros normales
+  // Admin del equipo puede gestionar miembros normales
   const currentUserMember = group.members.find(m => m.id === props.currentUser.id)
   return currentUserMember?.role === 'admin' && member.role !== 'admin'
 }
@@ -572,7 +572,7 @@ const removeMemberFromDetail = async (groupId, memberId) => {
     
     const confirmed = await confirm({
       title: 'Remover Miembro',
-      message: `¿Estás seguro de que quieres remover a "${member.username}" del grupo?`,
+      message: `¿Estás seguro de que quieres remover a "${member.username}" del equipo?`,
       confirmText: 'Remover',
       cancelText: 'Cancelar',
       type: 'danger'
@@ -584,7 +584,7 @@ const removeMemberFromDetail = async (groupId, memberId) => {
       // Actualizar la lista local inmediatamente
       selectedGroupForMembers.value.members = selectedGroupForMembers.value.members.filter(m => m.id !== memberId)
       
-      showMessage(`Miembro "${member.username}" removido del grupo`, 'success')
+      showMessage(`Miembro "${member.username}" removido del equipo`, 'success')
       
       // Si no quedan miembros, cerrar el modal
       if (selectedGroupForMembers.value.members.length === 0) {

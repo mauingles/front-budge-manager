@@ -3,15 +3,6 @@
     <div class="header-section">
       <div class="month-info">
         <div class="period-info">
-          <div class="month-row">
-            <svg class="calendar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-            <h2>{{ currentMonth }}</h2>
-          </div>
           <div class="group-row" v-if="selectedGroup">
             <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -19,7 +10,7 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
-            <span class="group-name">GRUPO {{ selectedGroup.name.toUpperCase() }}</span>
+            <span class="group-name">EQUIPO {{ selectedGroup.name.toUpperCase() }}</span>
           </div>
           <div class="group-row" v-else>
             <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -160,12 +151,13 @@ const saldoClass = computed(() => {
 
 <style scoped>
 .balance {
-  background: linear-gradient(135deg, #334155 0%, #475569 100%);
-  color: white;
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 10px 25px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   position: relative;
   overflow: hidden;
 }
@@ -217,7 +209,7 @@ const saldoClass = computed(() => {
 
 .group-name {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #64748b;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -237,7 +229,7 @@ const saldoClass = computed(() => {
 .balance-label {
   display: block;
   font-size: 13px;
-  opacity: 0.8;
+  color: #64748b;
   font-weight: 500;
   margin-bottom: 4px;
   letter-spacing: 0.025em;
@@ -269,7 +261,7 @@ const saldoClass = computed(() => {
 
 .progress-bar {
   height: 8px;
-  background: rgba(255, 255, 255, 0.2);
+  background: #f1f5f9;
   border-radius: 4px;
   position: relative;
   overflow: hidden;
@@ -301,28 +293,32 @@ const saldoClass = computed(() => {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  opacity: 0.7;
+  color: #64748b;
   font-weight: 500;
 }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 12px;
+  min-width: 0;
 }
 
 .metric-card {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 8px;
   padding: 16px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #e2e8f0;
   transition: all 0.2s ease;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .metric-card:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
+  background: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e1;
 }
 
 .metric-header {
@@ -335,13 +331,13 @@ const saldoClass = computed(() => {
 .metric-icon {
   width: 16px;
   height: 16px;
-  opacity: 0.8;
+  color: #64748b;
 }
 
 .metric-title {
   font-size: 12px;
   font-weight: 600;
-  opacity: 0.9;
+  color: #64748b;
   letter-spacing: 0.025em;
 }
 
@@ -350,6 +346,8 @@ const saldoClass = computed(() => {
   font-weight: 700;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   letter-spacing: -0.02em;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .income-card .metric-value {
@@ -398,7 +396,8 @@ const saldoClass = computed(() => {
   
   .metrics-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
+    width: 100%;
   }
   
   .metric-card {
@@ -428,11 +427,16 @@ const saldoClass = computed(() => {
   }
   
   .metric-card {
-    padding: 12px;
+    padding: 16px;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   }
   
   .metric-value {
-    font-size: 15px;
+    font-size: 18px;
+    line-height: 1.2;
   }
 }
 </style>

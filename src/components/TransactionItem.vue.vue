@@ -8,8 +8,8 @@
         </span>
       </div>
       <div class="meta">
-        <span class="user">👤 {{ user }}</span>
-        <span class="date">📅 {{ createdAt }}</span>
+        <span class="user">● {{ user }}</span>
+        <span class="date">○ {{ createdAt }}</span>
       </div>
     </div>
     <div :class="['amount', type]">
@@ -23,15 +23,20 @@ defineProps(['description', 'amount', 'type', 'user', 'createdAt', 'category'])
 
 const getCategoryIcon = (category) => {
   const icons = {
-    alquiler: '🏠',
-    electricidad: '⚡',
-    agua: '💧',
-    gas: '🔥',
-    internet: '🌐',
-    seguro: '🛡️',
-    otros: '📝'
+    alquiler: '◐',
+    electricidad: '◑',
+    agua: '◒',
+    gas: '◓',
+    internet: '◔',
+    telefono: '◕',
+    compra: '◖',
+    expensa: '◗',
+    impuesto: '◘',
+    seguro: '◙',
+    nomina: '◉',
+    otros: '◎'
   }
-  return icons[category] || '📝'
+  return icons[category] || '◎'
 }
 
 const getCategoryName = (category) => {
@@ -41,7 +46,12 @@ const getCategoryName = (category) => {
     agua: 'Agua',
     gas: 'Gas',
     internet: 'Internet',
+    telefono: 'Teléfono',
+    compra: 'Compra',
+    expensa: 'Expensa',
+    impuesto: 'Impuesto',
     seguro: 'Seguro',
+    nomina: 'Nómina',
     otros: 'Otros'
   }
   return names[category] || 'General'

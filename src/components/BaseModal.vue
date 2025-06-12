@@ -31,18 +31,19 @@ defineEmits(['close'])
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
-  padding: 20px;
+  z-index: 3;
+  padding: 16px;
   box-sizing: border-box;
 }
 
 .modal-dialog {
   background: #ffffff;
   border-radius: 8px;
-  padding: 16px;
+  padding: 24px 12px 16px 16px;
   min-width: 300px;
   max-width: 90vw;
-  width: auto;
+  width: 100%;
+  max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 40px -12px rgb(0 0 0 / 0.25);
@@ -70,7 +71,7 @@ defineEmits(['close'])
   justify-content: center;
   width: 28px;
   height: 28px;
-  z-index: 10;
+  z-index: 2;
 }
 
 .modal-close:hover {
@@ -85,28 +86,35 @@ defineEmits(['close'])
 
 @media (max-width: 768px) {
   .modal-overlay {
-    padding: 12px;
+    padding: 16px;
+    align-items: center;
+    justify-content: center;
   }
   
   .modal-dialog {
-    padding: 14px;
-    max-width: 95vw;
-    min-width: 280px;
-    border-radius: 6px;
+    padding: 24px 12px 20px 20px;
+    max-width: 90vw;
+    width: 100%;
+    min-width: unset;
+    border-radius: 8px;
+    max-height: 85vh;
   }
 }
 
 @media (max-width: 480px) {
   .modal-overlay {
-    padding: 8px;
+    padding: 12px;
+    align-items: center;
+    justify-content: center;
   }
   
   .modal-dialog {
-    padding: 12px;
-    border-radius: 6px;
-    max-height: 95vh;
-    max-width: 98vw;
-    min-width: 260px;
+    padding: 24px 12px 16px 16px;
+    border-radius: 8px;
+    max-height: 90vh;
+    max-width: 95vw;
+    width: 100%;
+    min-width: unset;
   }
 }
 </style>

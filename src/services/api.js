@@ -1,95 +1,137 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+import { loadAppData, saveAppData } from './firestore.js'
 
 class ApiService {
-  async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    };
+  constructor() {
+    this.isOnline = true
+    this.errorMessage = ''
+  }
 
+  // Simular el comportamiento del API anterior pero usando Firestore
+  async getAllData() {
     try {
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      return await response.json();
+      this.isOnline = true
+      this.errorMessage = ''
+      return await loadAppData()
     } catch (error) {
-      console.error('API request failed:', error);
-      throw error;
+      this.isOnline = false
+      this.errorMessage = 'Error al cargar datos de Firestore'
+      console.error('Error en getAllData:', error)
+      throw error
     }
   }
 
-  // Métodos para datos completos
-  async getAllData() {
-    return this.request('/data');
-  }
-
   async saveAllData(data) {
-    return this.request('/data', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    try {
+      this.isOnline = true
+      this.errorMessage = ''
+      await saveAppData(data)
+      return { success: true }
+    } catch (error) {
+      this.isOnline = false
+      this.errorMessage = 'Error al guardar datos en Firestore'
+      console.error('Error en saveAllData:', error)
+      throw error
+    }
   }
 
-  // Métodos para transacciones
+  // Métodos legacy para compatibilidad (ya no se usan pero mantenemos por si acaso)
   async getTransactions() {
-    return this.request('/transactions');
+    const data = await this.getAllData()
+    return data.transactions || []
   }
 
   async addTransaction(transaction) {
-    return this.request('/transactions', {
-      method: 'POST',
-      body: JSON.stringify(transaction),
-    });
+    const data = await this.getAllData()
+    data.transactions = data.transactions || []
+    data.transactions.push({
+      ...transaction,
+      id: Date.now(),
+      createdAt: new Date().toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    })
+    await this.saveAllData(data)
+    return { success: true }
   }
 
   async updateTransaction(id, transaction) {
-    return this.request(`/transactions/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(transaction),
-    });
+    const data = await this.getAllData()
+    const index = data.transactions.findIndex(t => t.id === id)
+    if (index !== -1) {
+      data.transactions[index] = { ...transaction, id }
+      await this.saveAllData(data)
+    }
+    return { success: true }
   }
 
   async deleteTransaction(id) {
-    return this.request(`/transactions/${id}`, {
-      method: 'DELETE',
-    });
+    const data = await this.getAllData()
+    data.transactions = data.transactions.filter(t => t.id !== id)
+    await this.saveAllData(data)
+    return { success: true }
   }
 
-  // Métodos para usuarios
   async getUsers() {
-    return this.request('/users');
+    const data = await this.getAllData()
+    return data.users || []
   }
 
   async addUser(user) {
-    return this.request('/users', {
-      method: 'POST',
-      body: JSON.stringify(user),
-    });
+    const data = await this.getAllData()
+    data.users = data.users || []
+    data.users.push({
+      ...user,
+      id: Date.now()
+    })
+    await this.saveAllData(data)
+    return { success: true }
   }
 
-  // Métodos para configuraciones
   async getSettings() {
-    return this.request('/settings');
+    const data = await this.getAllData()
+    return data.settings || {}
   }
 
   async updateSettings(settings) {
-    return this.request('/settings', {
-      method: 'POST',
-      body: JSON.stringify(settings),
-    });
+    const data = await this.getAllData()
+    data.settings = { ...data.settings, ...settings }
+    await this.saveAllData(data)
+    return { success: true }
   }
 
-  // Health check
+  // Health check simulado
   async healthCheck() {
-    return this.request('/health');
+    try {
+      await this.getAllData()
+      return { status: 'ok', service: 'firestore' }
+    } catch (error) {
+      return { status: 'error', service: 'firestore', error: error.message }
+    }
+  }
+
+  // Método para migrar datos del servidor local
+  async migrateFromServer() {
+    try {
+      console.log('🔄 Intentando migrar datos del servidor local...')
+      const response = await fetch('http://localhost:3001/api/data')
+      if (response.ok) {
+        const localData = await response.json()
+        console.log('📦 Datos del servidor local obtenidos:', Object.keys(localData))
+        await saveAppData(localData)
+        console.log('✅ Migración completada desde servidor local')
+        return localData
+      }
+    } catch (error) {
+      console.log('⚠️ No se pudo conectar al servidor local (normal en producción)')
+    }
+    
+    // Si no hay servidor local, usar datos por defecto
+    return await this.getAllData()
   }
 }
 
-export default new ApiService();
+export default new ApiService()

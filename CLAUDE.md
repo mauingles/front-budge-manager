@@ -44,7 +44,7 @@ This is a sophisticated Vue 3 budget management application with group collabora
 {
   id: number,
   type: 'income' | 'expense',
-  category: string, // for expenses: 'alquiler', 'electricidad', 'agua', 'gas', 'internet', 'seguro', 'otros'
+  category: string, // for expenses: 'alquiler', 'electricidad', 'agua', 'gas', 'internet', 'telefono', 'compra', 'expensa', 'impuesto', 'seguro', 'otros' | for income: 'nomina', 'otros'
   description: string,
   amount: number,
   user: string,
