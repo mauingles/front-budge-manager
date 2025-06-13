@@ -12,7 +12,7 @@ const confirmState = ref({
 })
 
 export function useConfirm() {
-  const confirm = (options) => {
+  const confirm = (options = {}) => {
     return new Promise((resolve, reject) => {
       confirmState.value = {
         show: true,

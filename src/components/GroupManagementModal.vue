@@ -385,7 +385,7 @@ const joinGroup = () => {
 
 const copyInvitationMessage = async () => {
   try {
-    const message = `Te invito a participar en la app https://budge-manager.netlify.app de mi grupo "${selectedGroupForInvite.value.name}", utilizando este código ${selectedGroupForInvite.value.inviteCode}`
+    const message = `Te invito a participar en la app https://budge-manager.netlify.app?groupCode=${selectedGroupForInvite.value.inviteCode} de mi grupo "${selectedGroupForInvite.value.name}"`
     await navigator.clipboard.writeText(message)
     showMessage('Mensaje de invitación copiado al portapapeles', 'success')
   } catch (err) {

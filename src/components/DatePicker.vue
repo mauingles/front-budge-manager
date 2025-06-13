@@ -36,9 +36,7 @@
         </div>
       </div>
     </div>
-    
-    <!-- Overlay para cerrar al hacer click fuera -->
-    <div v-if="showPicker" @click="showPicker = false" class="picker-overlay"></div>
+    <div v-if="showPicker" @click="showPicker = false" class="picker-overlay" />
   </div>
 </template>
 
@@ -238,6 +236,7 @@ onUnmounted(() => {
   width: max-content;
   max-height: 300px;
   overflow-y: auto;
+  z-index: 2;
 }
 
 @keyframes slideDown {

@@ -1,38 +1,9 @@
 <template>
-  <BaseCard>
-    <h2>{{ isLogin ? 'Iniciar Sesión' : 'Registrarse' }}</h2>
+    <div class="login-form">
+    <h2>Iniciar Sesión</h2>
     
     <form @submit.prevent="handleSubmit" class="form">
-      <div class="field">
-        <label>Email</label>
-        <BaseInput 
-          v-model="email" 
-          type="email"
-          placeholder="Ingresa tu email"
-          required
-        />
-      </div>
-      
-      <div class="field">
-        <label>Contraseña</label>
-        <BaseInput 
-          v-model="password" 
-          type="password"
-          placeholder="Ingresa tu contraseña"
-          required
-        />
-      </div>
-      
-      
-      <BaseButton type="submit" :disabled="!isFormValid || loading">
-        {{ loading ? 'Cargando...' : (isLogin ? 'Iniciar Sesión' : 'Registrarse') }}
-      </BaseButton>
-      
-      <!-- Separador "o" -->
-      <div v-if="isLogin" class="divider">
-        <span>o</span>
-      </div>
-      
+
       <!-- Botón de Google (solo para login) -->
       <button 
         v-if="isLogin" 
@@ -50,24 +21,15 @@
         {{ loading ? 'Conectando...' : 'Continuar con Google' }}
       </button>
       
-      <div class="toggle">
-        <button type="button" @click="toggleMode" class="link-btn">
-          {{ isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión' }}
-        </button>
-      </div>
-      
       <div v-if="error || authError" class="error">
         ❌ {{ error || authError }}
       </div>
     </form>
-  </BaseCard>
+  </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import BaseCard from './BaseCard.vue'
-import BaseInput from './BaseInput.vue'
-import BaseButton from './BaseButton.vue'
 import { useAuth } from '@/composables/useAuth.js'
 
 const emit = defineEmits(['login', 'register', 'google-login'])
@@ -136,6 +98,14 @@ defineExpose({ showError })
 </script>
 
 <style scoped>
+.login-form {
+  margin-top: auto;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
 .form {
   display: flex;
   flex-direction: column;

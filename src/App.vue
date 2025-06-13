@@ -12,14 +12,13 @@
     <!-- App principal si está autenticado -->
     <div v-else-if="currentUser && !authLoading" class="main-app">
       <header class="header whatsapp-header">
-        <div class="mcdonalds-title">
+        <div class="header-title">
           <svg class="app-icon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
             <path d="M2 17L12 22L22 17"/>
             <path d="M2 12L12 17L22 12"/>
           </svg>
           <h1>Budget Manager</h1>
-          <span class="slogan">¡I'm lovin' it!</span>
         </div>
         <div class="actions">
           <button @click="openForm('income')" class="btn btn-income">
@@ -142,6 +141,17 @@
       @confirm="handleConfirm"
       @cancel="handleCancel"
       @close="closeConfirm" />
+
+      <ConfirmDialog
+      :show="autoGroupJoin.show"
+      :title="autoGroupJoin.title"
+      :message="autoGroupJoin.message"
+      :confirm-text="autoGroupJoin.confirmText"
+      :cancel-text="autoGroupJoin.cancelText"
+      :type="autoGroupJoin.type"
+      @confirm="autoGroupJoinHandleConfirm"
+      @cancel="autoGroupJoinHandleCancel"
+      @close="autoGroupJoinCloseConfirm" />
   </AppLayout>
 </template>
 
@@ -168,6 +178,7 @@ import { useConfirm } from '@/composables/useConfirm.js'
 const { user: firebaseUser, loading: authLoading, logout: firebaseLogout } = useAuth()
 const { addNotification } = useNotifications()
 const { confirmState, confirm, handleConfirm, handleCancel, closeConfirm } = useConfirm()
+const { confirmState: autoGroupJoin, confirm: autoGroupJoinConfirm, handleConfirm: autoGroupJoinHandleConfirm, handleCancel: autoGroupJoinHandleCancel, closeConfirm: autoGroupJoinCloseConfirm } = useConfirm()
 
 // Estado de conexión
 const isLoading = ref(true)
@@ -348,6 +359,7 @@ const loadData = async () => {
         // El rol se mantiene desde el servidor (no se sobrescribe)
       }
       currentUser.value = user
+      handleGroupCode();
     } else {
       currentUser.value = null
     }
@@ -458,11 +470,39 @@ watch([users, transactions, groups, MASTER_PASSWORD, selectedMonth, selectedGrou
 }, { deep: true })
 
 // Cargar datos al iniciar
-onMounted(() => {
-  loadData()
+onMounted(async () => {
+  await loadData();
+  if(currentUser.value) {
+    await handleGroupCode();
+  }
 })
 
 // Métodos
+const handleGroupCode = async () => {
+  const url = new URL(window.location)
+  const groupCode = url.searchParams.get('groupCode')
+  if(groupCode) {
+    const group = groups.value.find(g => g.inviteCode === groupCode)
+    if(!group) {
+      addNotification('Código de invitación inválido o ya fue usado', 'error')
+      return;
+    };
+    const admin = group.members.find(m => m.role === 'admin');
+    const acceptedInvitation = await autoGroupJoinConfirm({
+      title: 'Has sido invitado a unirse a un grupo',
+      message: `${admin.username} te invitó a unirte al grupo ${group.name}`,
+      confirmText: 'Unirse',
+      cancelText: 'Cancelar',
+    })
+
+    if(acceptedInvitation) {
+      handleJoinGroup(groupCode);
+      selectedGroup.value = group;
+    }
+    window.history.pushState({}, document.title, "/" + '' );
+  }
+}
+
 const openForm = (type) => {
   formType.value = type
   showModal.value = true
@@ -571,41 +611,6 @@ const deleteTransaction = async (transactionId) => {
     transactions.value = transactions.value.filter(t => t.id !== transactionId)
     
   }
-}
-
-// Métodos de autenticación
-const handleLogin = (userData) => {
-  // Sistema de autenticación local (admin/superadmin)
-  const user = users.value.find(u => u.email === userData.email && u.password === userData.password)
-  if (user) {
-    currentUser.value = user
-  } else {
-    loginForm.value.showError('Usuario o contraseña incorrectos')
-  }
-}
-
-const handleRegister = (userData) => {
-  // Sistema de registro local (solo usuarios normales)
-  const existingUser = users.value.find(u => u.email === userData.email)
-  if (existingUser) {
-    addNotification('El usuario ya existe', 'error')
-    return
-  }
-  
-  const newUser = {
-    id: Date.now(),
-    username: userData.email.split('@')[0],
-    email: userData.email,
-    password: userData.password,
-    role: 'user', // Siempre rol 'user' por defecto
-    isGoogleUser: false
-  }
-  
-  users.value.push(newUser)
-  currentUser.value = newUser
-  
-  console.log('✅ Usuario manual creado:', newUser.email, 'Role:', newUser.role)
-  addNotification('Usuario registrado correctamente', 'success')
 }
 
 const handleGoogleLogin = () => {
@@ -802,7 +807,7 @@ const handleCreateGroup = (groupData) => {
 
 const handleJoinGroup = (inviteCode) => {
   const group = groups.value.find(g => g.inviteCode === inviteCode)
-  
+  console.log('eze', groups)
   if (!group) {
     addNotification('Código de invitación inválido o ya fue usado', 'error')
     return
@@ -1001,7 +1006,7 @@ const processInvitation = (inviteCode) => {
   z-index: 2;
 }
 
-.mcdonalds-title {
+.header-title {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
