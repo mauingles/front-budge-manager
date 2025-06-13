@@ -5,7 +5,7 @@
       <div class="meta">
         <span class="user">{{ user }}</span>
         <span class="date">{{ formatDate(date) }}</span>
-        <span v-if="showGroup" class="group">{{ groupName || 'Sin equipo' }}</span>
+        <span v-if="showGroup" class="group">{{ groupName || 'Sin grupo' }}</span>
       </div>
     </div>
     <div class="transaction-actions">
@@ -46,24 +46,21 @@ defineEmits(['delete', 'edit'])
 
 <style scoped>
 .transaction {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(226, 232, 240, 0.6);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
+  transition: var(--transition-base);
   position: relative;
 }
 
 .transaction:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.1);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .transaction:last-child {
@@ -95,20 +92,20 @@ defineEmits(['delete', 'edit'])
 }
 
 .transaction-info h3 {
-  margin: 0 0 6px 0;
-  font-size: 15px;
-  color: #1e293b;
-  font-weight: 600;
-  line-height: 1.3;
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
 }
 
 .meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
+  gap: var(--spacing-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .user, .date {
@@ -142,11 +139,11 @@ defineEmits(['delete', 'edit'])
 }
 
 .amount.income {
-  color: #059669;
+  color: var(--color-success);
 }
 
 .amount.expense {
-  color: #dc2626;
+  color: var(--color-danger);
 }
 
 
@@ -182,32 +179,28 @@ defineEmits(['delete', 'edit'])
 }
 
 .edit-btn, .delete-btn {
-  width: 26px;
-  height: 26px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f8f9fa;
+  border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 16px;
   transition: all 0.2s ease;
   color: #64748b;
 }
 
 .edit-btn:hover {
-  background: rgba(240, 249, 255, 0.9);
-  border-color: #3b82f6;
-  color: #3b82f6;
-  transform: translateY(-1px);
+  background: #0070f3;
+  color: #ffffff;
 }
 
 .delete-btn:hover {
-  background: rgba(254, 242, 242, 0.9);
-  border-color: #ef4444;
-  color: #ef4444;
-  transform: translateY(-1px);
+  background: #ee0000;
+  color: #ffffff;
 }
 
 </style>

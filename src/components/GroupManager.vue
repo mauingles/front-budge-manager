@@ -1,22 +1,22 @@
 <template>
   <BaseModal :show="show" @close="$emit('close')" class="group-modal">
     <div class="group-manager">
-      <h2>Gestión de Equipos</h2>
+      <h2>Gestión de Grupos</h2>
       
-      <!-- Crear nuevo equipo -->
+      <!-- Crear nuevo grupo -->
       <div class="create-section">
-        <h3>Crear Nuevo Equipo</h3>
+        <h3>Crear Nuevo Grupo</h3>
         <form @submit.prevent="createGroup" class="create-form">
           <BaseInput
             v-model="newGroup.name"
-            label="Nombre del Equipo"
+            label="Nombre del Grupo"
             placeholder="Ej: Gastos de Casa, Viaje a Madrid..."
             required
           />
           <BaseInput
             v-model="newGroup.description"
             label="Descripción (opcional)"
-            placeholder="Descripción del equipo..."
+            placeholder="Descripción del grupo..."
           />
           <div class="form-actions">
             <BaseButton type="submit" :disabled="!newGroup.name">
@@ -25,23 +25,23 @@
                 <circle cx="9" cy="7" r="4"/>
                 <path d="m22 21-3-3m3 3v-3m0 3h-3"/>
               </svg>
-              Crear Equipo
+              Crear Grupo
             </BaseButton>
           </div>
         </form>
       </div>
 
-      <!-- Lista de equipos existentes -->
+      <!-- Lista de grupos existentes -->
       <div class="groups-section">
-        <h3>Mis Equipos</h3>
+        <h3>Mis Grupos</h3>
         <div v-if="userGroups.length === 0" class="empty-state">
           <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="m22 21-3-3m3 3v-3m0 3h-3"/>
           </svg>
-          <p>No tienes equipos creados aún</p>
-          <small>Crea tu primer equipo para compartir gastos</small>
+          <p>No tienes grupos creados aún</p>
+          <small>Crea tu primer grupo para compartir gastos</small>
         </div>
         
         <div v-else class="groups-list">
@@ -77,7 +77,7 @@
                 v-if="group.createdBy === currentUser.username" 
                 @click="deleteGroup(group)" 
                 class="action-btn delete-btn" 
-                title="Eliminar equipo"
+                title="Eliminar grupo"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3,6 5,6 21,6"/>
@@ -89,7 +89,7 @@
         </div>
       </div>
 
-      <!-- Modal de detalles del equipo -->
+      <!-- Modal de detalles del grupo -->
       <BaseModal :show="showGroupDetails" @close="showGroupDetails = false">
         <div v-if="selectedGroup" class="group-details">
           <h2>{{ selectedGroup.name }}</h2>
@@ -110,7 +110,7 @@
           </div>
           
           <div class="invite-section">
-            <h3>Invitar al Equipo</h3>
+            <h3>Invitar al Grupo</h3>
             <div class="invite-link-container">
               <input 
                 :value="getInviteLink(selectedGroup)" 
@@ -126,7 +126,7 @@
                 Copiar
               </button>
             </div>
-            <small class="invite-help">Comparte este link para que otros puedan unirse al equipo</small>
+            <small class="invite-help">Comparte este link para que otros puedan unirse al grupo</small>
           </div>
         </div>
       </BaseModal>
@@ -224,8 +224,8 @@ const viewGroupDetails = (group) => {
 
 const deleteGroup = async (group) => {
   const confirmed = await confirm({
-    title: 'Eliminar Equipo',
-    message: `¿Estás seguro de que quieres eliminar el equipo "${group.name}"?`,
+    title: 'Eliminar Grupo',
+    message: `¿Estás seguro de que quieres eliminar el grupo "${group.name}"?`,
     confirmText: 'Eliminar',
     cancelText: 'Cancelar',
     type: 'danger'

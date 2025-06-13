@@ -23,26 +23,6 @@
         />
       </div>
       
-      <div v-if="!isLogin" class="field">
-        <label>Rol</label>
-        <select v-model="role" class="select" required @change="onRoleChange">
-          <option value="">Seleccionar rol...</option>
-          <option value="superadmin">🔱 Super Administrador</option>
-          <option value="admin">👑 Administrador</option>
-          <option value="user">👤 Usuario</option>
-        </select>
-      </div>
-      
-      <div v-if="!isLogin && (role === 'admin' || role === 'superadmin')" class="field">
-        <label>Contraseña Maestra de Admin</label>
-        <BaseInput 
-          v-model="masterPassword" 
-          type="password"
-          placeholder="Ingresa la contraseña maestra"
-          required
-        />
-        <small class="hint">Se requiere contraseña maestra para crear cuentas de {{ role === 'superadmin' ? 'super administrador' : 'administrador' }}</small>
-      </div>
       
       <BaseButton type="submit" :disabled="!isFormValid || loading">
         {{ loading ? 'Cargando...' : (isLogin ? 'Iniciar Sesión' : 'Registrarse') }}
@@ -96,30 +76,14 @@ const { loginWithGoogle, loginWithEmail, register, error: authError, loading } =
 const isLogin = ref(true)
 const email = ref('')
 const password = ref('')
-const role = ref('')
-const masterPassword = ref('')
 const error = ref('')
 
 const isFormValid = computed(() => {
-  const baseValid = email.value && password.value
-  if (!isLogin.value) {
-    if (role.value === 'admin' || role.value === 'superadmin') {
-      return baseValid && role.value && masterPassword.value
-    }
-    return baseValid && role.value
-  }
-  return baseValid
+  return email.value && password.value
 })
 
 const toggleMode = () => {
   isLogin.value = !isLogin.value
-  error.value = ''
-  role.value = ''
-  masterPassword.value = ''
-}
-
-const onRoleChange = () => {
-  masterPassword.value = ''
   error.value = ''
 }
 
@@ -130,37 +94,24 @@ const handleSubmit = async () => {
   
   try {
     if (isLogin.value) {
-      // LOGIN: Solo Firebase para usuarios Google, directo para admin/superadmin
-      if (role.value === 'admin' || role.value === 'superadmin') {
-        // Login local para admin/superadmin
+      // LOGIN: Intentar Firebase primero para usuarios, luego local para admin/superadmin
+      try {
+        await loginWithEmail(email.value, password.value)
+        emit('login', { email: email.value })
+      } catch (firebaseError) {
+        // Si Firebase falla, intentar login local para admin/superadmin
         emit('login', { 
           email: email.value, 
           password: password.value 
         })
-      } else {
-        // Login con Firebase para usuarios normales
-        await loginWithEmail(email.value, password.value)
-        emit('login', { email: email.value })
       }
     } else {
-      // REGISTRO: Separar flujos
-      if (role.value === 'admin' || role.value === 'superadmin') {
-        // Registro manual para admin/superadmin (sin Firebase)
-        emit('register', { 
-          email: email.value, 
-          password: password.value,
-          role: role.value,
-          masterPassword: masterPassword.value 
-        })
-      } else {
-        // Registro con Firebase para usuarios normales
-        await register(email.value, password.value)
-        emit('register', { 
-          email: email.value, 
-          role: 'user',
-          masterPassword: masterPassword.value 
-        })
-      }
+      // REGISTRO: Solo registro con Firebase para usuarios normales
+      await register(email.value, password.value)
+      emit('register', { 
+        email: email.value, 
+        role: 'user'
+      })
     }
   } catch (err) {
     error.value = authError.value || 'Error en la autenticación'

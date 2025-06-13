@@ -27,9 +27,9 @@
     </div>
     
     <div class="field">
-      <label>Equipo</label>
+      <label>Grupo</label>
       <select v-model="selectedGroup" class="select">
-        <option value="">Sin equipo</option>
+        <option value="">Sin grupo</option>
         <option v-for="group in availableGroups" :key="group.id" :value="group.id">
           {{ group.name }}
         </option>

@@ -11,8 +11,16 @@
     
     <!-- App principal si está autenticado -->
     <div v-else-if="currentUser && !authLoading" class="main-app">
-      <header class="header">
-        <h1>Budget Manager</h1>
+      <header class="header whatsapp-header">
+        <div class="mcdonalds-title">
+          <svg class="app-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+            <path d="M2 17L12 22L22 17"/>
+            <path d="M2 12L12 17L22 12"/>
+          </svg>
+          <h1>Budget Manager</h1>
+          <span class="slogan">¡I'm lovin' it!</span>
+        </div>
         <div class="actions">
           <button @click="openForm('income')" class="btn btn-income">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
@@ -26,14 +34,14 @@
               <polyline points="1,18 8.5,10.5 13.5,15.5 23,6"/>
               <polyline points="1,18 6,18 6,13"/>
             </svg>
-            Egresos
+            Gastos
           </button>
           <GroupSelectorModal 
             v-model="selectedGroup" 
             :available-groups="userGroups" 
           />
           <DatePicker v-model="selectedMonth" />
-          <button @click="openGroupModal" class="btn" title="Equipos">
+          <button @click="openGroupModal" class="btn" title="Grupos">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -104,6 +112,7 @@
       @change-username="handleUsernameChange"
       @reset-user-password="handleUserPasswordReset"
       @delete-user="handleDeleteUser"
+      @refresh-user-data="refreshUserData"
       @logout="handleLogout" />
     
     <GroupManagementModal 
@@ -179,7 +188,7 @@ const getCurrentMonth = () => {
   return `${year}-${month}`
 }
 const selectedMonth = ref(getCurrentMonth())
-const selectedGroup = ref(null) // Equipo seleccionado actualmente
+const selectedGroup = ref(null) // Grupo seleccionado actualmente
 const transactions = ref([])
 const groups = ref([])
 
@@ -200,9 +209,16 @@ const filteredTransactions = computed(() => {
   
   // FILTRO PRINCIPAL: Solo transacciones donde el usuario tiene acceso
   const userGroupIds = userGroups.value.map(g => g.id)
+  const isAdmin = currentUser.value.role === 'admin'
+  const isSuperAdmin = currentUser.value.role === 'superadmin'
   
-  // Filtrar por acceso del usuario (TODOS los usuarios siguen las mismas reglas)
+  // Filtrar por acceso del usuario
   filtered = filtered.filter(t => {
+    // Admin y SuperAdmin pueden ver todas las transacciones
+    if (isAdmin || isSuperAdmin) {
+      return true
+    }
+    
     // Transacciones sin grupo: solo si fueron creadas por el usuario actual
     if (!t.groupId) {
       return t.userId === currentUser.value.id
@@ -240,7 +256,15 @@ const totalExpenses = computed(() =>
 const hasGroupAccess = (groupId) => {
   if (!currentUser.value || !groupId) return false
   
-  // TODOS los usuarios (incluyendo admin/superadmin) deben ser miembros del grupo
+  const isAdmin = currentUser.value.role === 'admin'
+  const isSuperAdmin = currentUser.value.role === 'superadmin'
+  
+  // Admin y SuperAdmin tienen acceso a todos los grupos
+  if (isAdmin || isSuperAdmin) {
+    return true
+  }
+  
+  // Usuarios regulares deben ser miembros del grupo
   const group = groups.value.find(g => g.id === groupId)
   return group?.members.some(member => member.id === currentUser.value?.id) || false
 }
@@ -248,13 +272,25 @@ const hasGroupAccess = (groupId) => {
 const userGroups = computed(() => {
   if (!currentUser.value) return []
   
+  const isAdmin = currentUser.value.role === 'admin'
+  const isSuperAdmin = currentUser.value.role === 'superadmin'
+  
   console.log('🔍 USER GROUPS DEBUG:')
   console.log('- Usuario actual:', currentUser.value.email, 'Role:', currentUser.value.role, 'ID:', currentUser.value.id, 'Tipo ID:', typeof currentUser.value.id)
   console.log('- Total grupos en sistema:', groups.value.length)
   console.log('- Todos los grupos:', groups.value.map(g => ({ name: g.name, id: g.id, members: g.members.map(m => ({ id: m.id, username: m.username })) })))
   
-  // TODOS los usuarios (incluyendo admin/superadmin) solo ven grupos donde son miembros
-  console.log('👤 Todos los usuarios - solo grupos donde son miembros')
+  // Admin y SuperAdmin pueden ver todos los grupos
+  if (isAdmin || isSuperAdmin) {
+    console.log('👑 Admin/SuperAdmin - todos los grupos disponibles')
+    return groups.value.filter(group => {
+      const isHidden = group.hiddenFor && group.hiddenFor.includes(currentUser.value.id)
+      return !isHidden
+    })
+  }
+  
+  // Usuarios regulares solo ven grupos donde son miembros
+  console.log('👤 Usuario regular - solo grupos donde es miembro')
   const userFilteredGroups = groups.value.filter(group => {
     console.log(`- Grupo "${group.name}":`)
     console.log('  - members:', group.members)
@@ -290,6 +326,7 @@ const loadData = async () => {
     if (firebaseUser.value) {
       let user = users.value.find(u => u.email === firebaseUser.value.email)
       if (!user) {
+        // Crear nuevo usuario si no existe
         user = {
           id: Date.now(),
           username: firebaseUser.value.displayName || firebaseUser.value.email.split('@')[0],
@@ -301,6 +338,14 @@ const loadData = async () => {
           password: null
         }
         users.value.push(user)
+      } else {
+        // Usuario existente: sincronizar datos de Firebase con los datos del servidor
+        user.photoURL = firebaseUser.value.photoURL
+        user.uid = firebaseUser.value.uid
+        if (firebaseUser.value.displayName) {
+          user.username = firebaseUser.value.displayName
+        }
+        // El rol se mantiene desde el servidor (no se sobrescribe)
       }
       currentUser.value = user
     } else {
@@ -342,16 +387,26 @@ const saveData = async () => {
 }
 
 // Watcher para sincronizar Firebase user con currentUser
-watch(firebaseUser, (newFirebaseUser) => {
+watch(firebaseUser, async (newFirebaseUser) => {
   if (newFirebaseUser) {
-    // Usuario de Firebase autenticado
+    // Usuario de Firebase autenticado - recargar datos del servidor para obtener roles actualizados
+    console.log('🔄 Firebase user autenticado, recargando datos del servidor...')
+    await loadData()
+    
+    // Después de recargar, buscar el usuario actualizado
     const existingUser = users.value.find(u => u.email === newFirebaseUser.email)
     
     if (existingUser) {
-      // Usuario local existente
+      // Usuario local existente: sincronizar datos de Firebase preservando el rol del servidor
+      existingUser.photoURL = newFirebaseUser.photoURL
+      existingUser.uid = newFirebaseUser.uid
+      if (newFirebaseUser.displayName) {
+        existingUser.username = newFirebaseUser.displayName
+      }
       currentUser.value = existingUser
+      console.log('✅ Usuario Google existente sincronizado:', existingUser.email, 'Role:', existingUser.role)
     } else {
-      // Nuevo usuario de Firebase
+      // Nuevo usuario de Firebase (no debería pasar después de loadData, pero por seguridad)
       const newUser = {
         id: Date.now(),
         username: newFirebaseUser.displayName || newFirebaseUser.email.split('@')[0],
@@ -365,12 +420,35 @@ watch(firebaseUser, (newFirebaseUser) => {
       
       users.value.push(newUser)
       currentUser.value = newUser
+      console.log('✅ Nuevo usuario Google creado:', newUser.email, 'Role:', newUser.role)
     }
   } else if (!newFirebaseUser && currentUser.value?.isGoogleUser) {
     // Firebase user logged out y current user es de Google
     currentUser.value = null
   }
 })
+
+// Función para refrescar datos del usuario actual
+const refreshUserData = async () => {
+  if (!currentUser.value) return
+  
+  try {
+    console.log('🔄 Refrescando datos del usuario...')
+    const data = await apiService.getAllData()
+    users.value = data.users || []
+    
+    // Buscar y actualizar el usuario actual
+    const updatedUser = users.value.find(u => u.email === currentUser.value.email)
+    if (updatedUser) {
+      currentUser.value = updatedUser
+      console.log('✅ Datos del usuario actualizados:', updatedUser.email, 'Role:', updatedUser.role)
+      addNotification('Datos de usuario actualizados', 'success')
+    }
+  } catch (error) {
+    console.error('Error al refrescar datos del usuario:', error)
+    addNotification('Error al actualizar datos del usuario', 'error')
+  }
+}
 
 // Watchers para auto-guardado
 watch([users, transactions, groups, MASTER_PASSWORD, selectedMonth, selectedGroup, currentUser], () => {
@@ -412,7 +490,7 @@ const getModalTitle = () => {
 
 const getTransactionsSectionTitle = () => {
   if (selectedGroup.value) {
-    return `Transacciones del Equipo ${selectedGroup.value.name}`
+    return `Transacciones del grupo ${selectedGroup.value.name.charAt(0).toUpperCase() + selectedGroup.value.name.slice(1).toLowerCase()}`
   }
   return 'Todas las transacciones'
 }
@@ -507,19 +585,11 @@ const handleLogin = (userData) => {
 }
 
 const handleRegister = (userData) => {
-  // Sistema de registro local (admin/superadmin)
+  // Sistema de registro local (solo usuarios normales)
   const existingUser = users.value.find(u => u.email === userData.email)
   if (existingUser) {
-    loginForm.value.showError('El usuario ya existe')
+    addNotification('El usuario ya existe', 'error')
     return
-  }
-  
-  // Verificar contraseña maestra para admins y super admins
-  if (userData.role === 'admin' || userData.role === 'superadmin') {
-    if (userData.masterPassword !== MASTER_PASSWORD.value) {
-      loginForm.value.showError('Contraseña maestra incorrecta')
-      return
-    }
   }
   
   const newUser = {
@@ -527,7 +597,7 @@ const handleRegister = (userData) => {
     username: userData.email.split('@')[0],
     email: userData.email,
     password: userData.password,
-    role: userData.role,
+    role: 'user', // Siempre rol 'user' por defecto
     isGoogleUser: false
   }
   
@@ -535,6 +605,7 @@ const handleRegister = (userData) => {
   currentUser.value = newUser
   
   console.log('✅ Usuario manual creado:', newUser.email, 'Role:', newUser.role)
+  addNotification('Usuario registrado correctamente', 'success')
 }
 
 const handleGoogleLogin = () => {
@@ -621,17 +692,38 @@ const handleUsernameChange = (newUsername) => {
   }
 }
 
-const handleUserPasswordReset = (resetData) => {
-  // Encontrar y actualizar la contraseña del usuario
-  const userIndex = users.value.findIndex(u => u.id === resetData.userId)
+const handleUserPasswordReset = (userId) => {
+  // Encontrar el usuario
+  const userToReset = users.value.find(u => u.id === userId)
+  if (!userToReset) {
+    addNotification('Usuario no encontrado', 'error')
+    return
+  }
+  
+  // Verificar permisos de reseteo
+  const currentUserRole = currentUser.value.role
+  const targetUserRole = userToReset.role
+  
+  let canReset = false
+  
+  if (currentUserRole === 'superadmin') {
+    // SuperAdmin puede resetear admin y user
+    canReset = targetUserRole === 'admin' || targetUserRole === 'user'
+  } else if (currentUserRole === 'admin') {
+    // Admin solo puede resetear user
+    canReset = targetUserRole === 'user'
+  }
+  
+  if (!canReset) {
+    addNotification('No tienes permisos para resetear la contraseña de este usuario', 'error')
+    return
+  }
+  
+  // Resetear contraseña a "123" por defecto
+  const userIndex = users.value.findIndex(u => u.id === userId)
   if (userIndex !== -1) {
-    users.value[userIndex].password = resetData.newPassword
-    
-    // Si es el usuario actual, también actualizar currentUser
-    if (currentUser.value.id === resetData.userId) {
-      currentUser.value.password = resetData.newPassword
-    }
-    
+    users.value[userIndex].password = '123'
+    addNotification(`Contraseña reseteada para ${userToReset.username}. Nueva contraseña: 123`, 'success')
   }
 }
 
@@ -643,6 +735,25 @@ const handleDeleteUser = (userId) => {
   // No permitir eliminar al usuario actual
   if (userId === currentUser.value.id) {
     addNotification('No puedes eliminar tu propia cuenta', 'error')
+    return
+  }
+  
+  // Verificar permisos de eliminación
+  const currentUserRole = currentUser.value.role
+  const targetUserRole = userToDelete.role
+  
+  let canDelete = false
+  
+  if (currentUserRole === 'superadmin') {
+    // SuperAdmin puede eliminar admin y user
+    canDelete = targetUserRole === 'admin' || targetUserRole === 'user'
+  } else if (currentUserRole === 'admin') {
+    // Admin solo puede eliminar user
+    canDelete = targetUserRole === 'user'
+  }
+  
+  if (!canDelete) {
+    addNotification('No tienes permisos para eliminar este usuario', 'error')
     return
   }
   
@@ -699,7 +810,7 @@ const handleJoinGroup = (inviteCode) => {
   
   const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
   if (isAlreadyMember) {
-    addNotification('Ya eres miembro de este equipo', 'warning')
+    addNotification('Ya eres miembro de este grupo', 'warning')
     return
   }
   
@@ -714,7 +825,7 @@ const handleJoinGroup = (inviteCode) => {
   group.inviteCode = null
   
   
-  addNotification(`¡Te has unido al equipo "${group.name}"! El código de invitación ha sido invalidado.`, 'success')
+  addNotification(`¡Te has unido al grupo "${group.name}"! El código de invitación ha sido invalidado.`, 'success')
 }
 
 const handleRemoveMember = ({ groupId, memberId }) => {
@@ -750,11 +861,36 @@ const handleLeaveGroup = (groupId) => {
     selectedGroup.value = null
   }
   
-  addNotification(`Has salido del equipo "${group.name}"`, 'success')
+  addNotification(`Has salido del grupo "${group.name}"`, 'success')
 }
 
 const handleDeleteGroup = (groupId) => {
   const group = groups.value.find(g => g.id === groupId)
+  if (!group) {
+    addNotification('Grupo no encontrado', 'error')
+    return
+  }
+  
+  // Verificar permisos de eliminación
+  const currentUserRole = currentUser.value.role
+  let canDelete = false
+  
+  if (currentUserRole === 'superadmin') {
+    // SuperAdmin puede eliminar cualquier grupo
+    canDelete = true
+  } else if (currentUserRole === 'admin') {
+    // Admin puede eliminar grupos creados por usuarios con rol 'user'
+    const groupCreator = users.value.find(u => u.id === group.createdBy)
+    canDelete = groupCreator && groupCreator.role === 'user'
+  } else if (currentUserRole === 'user') {
+    // Usuario regular solo puede eliminar grupos que creó
+    canDelete = group.createdBy === currentUser.value.id
+  }
+  
+  if (!canDelete) {
+    addNotification('No tienes permisos para eliminar este grupo', 'error')
+    return
+  }
   
   // Eliminar el grupo
   groups.value = groups.value.filter(g => g.id !== groupId)
@@ -815,9 +951,9 @@ const processInvitation = (inviteCode) => {
         username: currentUser.value.username,
         role: 'member'
       })
-      addNotification(`¡Te has unido al equipo "${group.name}"!`, 'success')
+      addNotification(`¡Te has unido al grupo "${group.name}"!`, 'success')
     } else {
-      addNotification('Ya eres miembro de este equipo', 'warning')
+      addNotification('Ya eres miembro de este grupo', 'warning')
     }
   } else {
     addNotification('Código de invitación inválido', 'error')
@@ -826,27 +962,9 @@ const processInvitation = (inviteCode) => {
 </script>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* App-specific styles only - global styles moved to design-system.css */
 
-html, body {
-  width: 100%;
-  overflow-x: hidden;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
-  background-attachment: fixed;
-  background-size: cover;
-  color: #334155;
-  line-height: 1.6;
-}
+/* Global styles moved to design-system.css */
 
 #app {
   width: 100vw;
@@ -857,119 +975,120 @@ body {
 
 .loading {
   text-align: center;
-  padding: 40px;
-  color: white;
+  padding: var(--spacing-4xl);
+  color: var(--text-muted);
 }
 
 .offline {
-  background: #ef4444;
-  color: white;
-  padding: 12px;
+  background: var(--color-danger);
+  color: var(--bg-primary);
+  padding: var(--spacing-md);
   text-align: center;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
+/* Header */
 .header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 16px 24px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-primary);
+  padding: var(--spacing-lg) var(--spacing-2xl);
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  gap: var(--spacing-lg);
   position: relative;
   z-index: 2;
 }
 
+.mcdonalds-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.app-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--text-primary);
+  background: transparent;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-xs);
+  border: 1px solid var(--border-primary);
+}
+
 .header h1 {
-  color: #0f172a;
-  font-size: 1.75rem;
-  font-weight: 700;
+  color: var(--text-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
   letter-spacing: -0.025em;
   margin: 0;
+  font-family: var(--font-family-base);
+}
+
+.slogan {
+  display: none;
 }
 
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
   flex-wrap: wrap;
 }
 
+/* Header buttons using design system */
 .btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: white;
-  color: #334155;
-  font-size: 14px;
-  font-weight: 600;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius-md);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-base);
   text-decoration: none;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  height: 36px;
 }
 
 .btn:hover {
-  border-color: #cbd5e1;
-  background: #f8fafc;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .btn-income {
-  border-color: #10b981;
-  color: #10b981;
-  background: #ecfdf5;
+  background: var(--color-success);
+  color: var(--bg-primary);
+  border-color: var(--color-success);
 }
 
 .btn-income:hover {
-  background: #d1fae5;
-  border-color: #059669;
+  background: var(--color-success-hover);
+  border-color: var(--color-success-hover);
 }
 
 .btn-expense {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: #fef2f2;
+  background: var(--color-danger);
+  color: var(--bg-primary);
+  border-color: var(--color-danger);
 }
 
 .btn-expense:hover {
-  background: #fee2e2;
-  border-color: #dc2626;
-}
-
-.btn-logout {
-  border-color: #475569;
-  color: #334155;
-  background: #f8fafc;
-  width: auto !important;
-  max-width: 24px !important;
-  min-width: 24px !important;
-  padding: 8px 2px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.btn-logout:hover {
-  background: #f1f5f9;
-  border-color: #334155;
-  color: #1e293b;
+  background: var(--color-danger-hover);
+  border-color: var(--color-danger-hover);
 }
 
 .dashboard {
-  padding: 24px;
+  padding: var(--spacing-2xl);
   display: grid;
   grid-template-columns: 350px 1fr;
   grid-template-rows: auto;
-  gap: 24px;
+  gap: var(--spacing-2xl);
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -985,34 +1104,35 @@ body {
 }
 
 h3 {
-  margin: 0 0 20px 0;
-  color: #0f172a;
-  font-weight: 600;
-  font-size: 1.125rem;
+  margin: 0 0 var(--spacing-lg) 0;
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
-    padding: 16px;
-    gap: 12px;
+    padding: var(--spacing-lg);
+    gap: var(--spacing-md);
     align-items: stretch;
   }
   
   .header h1 {
-    font-size: 1.5rem;
+    font-size: var(--font-size-2xl);
     text-align: center;
-    margin-bottom: 8px;
+    margin-bottom: var(--spacing-sm);
   }
   
   .actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto auto;
-    gap: 8px;
+    gap: var(--spacing-sm);
     width: 100%;
   }
   
@@ -1025,16 +1145,16 @@ h3 {
   .actions > button:nth-child(7) { grid-column: 2; grid-row: 3; }
   
   .dashboard {
-    padding: 16px;
+    padding: var(--spacing-lg);
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--spacing-xl);
     max-width: 100%;
   }
   
   .btn {
-    padding: 12px 8px;
-    font-size: 13px;
+    padding: var(--spacing-md) var(--spacing-sm);
+    font-size: var(--font-size-sm);
     min-width: 44px;
     height: 44px;
     justify-content: center;
@@ -1061,13 +1181,13 @@ h3 {
     align-items: stretch;
   }
   
-  /* Primera fila: Solo Ingresos y Egresos */
+  /* Primera fila: Solo Ingresos y Gastos */
   .actions > button:nth-child(1) { /* Botón Ingresos */
     grid-column: 1; 
     grid-row: 1; 
   }
   
-  .actions > button:nth-child(2) { /* Botón Egresos */
+  .actions > button:nth-child(2) { /* Botón Gastos */
     grid-column: 2; 
     grid-row: 1; 
   }
@@ -1083,8 +1203,8 @@ h3 {
     grid-row: 2; 
   }
   
-  /* Tercera fila: Equipos y Perfil */
-  .actions > button:nth-child(5) { /* Botón Equipos */
+  /* Tercera fila: Grupos y Perfil */
+  .actions > button:nth-child(5) { /* Botón Grupos */
     grid-column: 1; 
     grid-row: 3; 
   }
@@ -1124,49 +1244,14 @@ h3 {
   
   /* Iconos más pequeños en móvil */
   .actions svg {
-    width: 16px !important;
-    height: 16px !important;
+    width: 18px !important;
+    height: 18px !important;
     flex-shrink: 0;
   }
   
   .dashboard {
-    padding: 8px;
-    gap: 16px;
-  }
-  
-  select {
-    font-size: 12px;
-    padding: 10px 8px;
-    min-width: unset;
-    height: 40px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: white;
-    color: #334155;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 8px center;
-    background-repeat: no-repeat;
-    background-size: 16px;
-    padding-right: 32px;
-    position: relative;
-  }
-  
-  select:hover {
-    border-color: #cbd5e1;
-    background: #f8fafc;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  }
-  
-  select:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    padding: var(--spacing-sm);
+    gap: var(--spacing-lg);
   }
 }
 </style>

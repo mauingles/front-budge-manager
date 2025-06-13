@@ -6,7 +6,8 @@
     
     <!-- Footer Profesional -->
     <footer class="app-footer">
-      <div class="footer-content">
+      <!-- Vista Desktop -->
+      <div class="footer-content desktop-footer">
         <div class="footer-left">
           <span class="app-name">Budget Manager</span>
           <span class="copyright">© 2025 Todos los derechos reservados</span>
@@ -22,6 +23,23 @@
         
         <div class="footer-right">
           <span class="version">v1.0.0</span>
+        </div>
+      </div>
+      
+      <!-- Vista Mobile -->
+      <div class="mobile-footer">
+        <button @click="toggleMobileFooter" class="mobile-footer-toggle">
+          Budget Manager 2025 - Todos los derechos reservados
+          <span class="toggle-icon" :class="{ 'expanded': showMobileFooter }">▼</span>
+        </button>
+        
+        <div v-if="showMobileFooter" class="mobile-footer-content">
+          <div class="mobile-footer-links">
+            <button @click="showTerms = true" class="mobile-footer-link">Términos de Uso</button>
+            <button @click="showPrivacy = true" class="mobile-footer-link">Política de Privacidad</button>
+            <button @click="showContact = true" class="mobile-footer-link">Contacto</button>
+          </div>
+          <div class="mobile-footer-version">v1.0.0</div>
         </div>
       </div>
     </footer>
@@ -41,7 +59,7 @@
           <p>Budget Manager es una herramienta de gestión financiera personal y grupal. Te comprometes a usar la aplicación de manera responsable y legal.</p>
           
           <h4>3. Privacidad de Datos</h4>
-          <p>Tus datos financieros son privados. Solo tú y los miembros de tus equipos pueden acceder a la información compartida.</p>
+          <p>Tus datos financieros son privados. Solo tú y los miembros de tus grupos pueden acceder a la información compartida.</p>
           
           <h4>4. Responsabilidad</h4>
           <p>Eres responsable de mantener la confidencialidad de tu cuenta y de todas las actividades realizadas bajo tu usuario.</p>
@@ -61,7 +79,7 @@
         </div>
         <div class="modal-body">
           <h4>1. Información que Recopilamos</h4>
-          <p>Recopilamos información financiera que ingresas voluntariamente, como transacciones, categorías y datos de equipos.</p>
+          <p>Recopilamos información financiera que ingresas voluntariamente, como transacciones, categorías y datos de grupos.</p>
           
           <h4>2. Cómo Usamos tu Información</h4>
           <p>Utilizamos tus datos exclusivamente para proporcionar los servicios de gestión financiera y mejorar tu experiencia de usuario.</p>
@@ -109,16 +127,18 @@ import { ref } from 'vue'
 const showTerms = ref(false)
 const showPrivacy = ref(false) 
 const showContact = ref(false)
+const showMobileFooter = ref(false)
+
+const toggleMobileFooter = () => {
+  showMobileFooter.value = !showMobileFooter.value
+}
 </script>
 
 <style scoped>
 .layout {
   width: 100vw;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
-  background-attachment: fixed;
-  background-size: cover;
-  margin: 0;
+  background: #fafbfc;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -126,7 +146,6 @@ const showContact = ref(false)
 
 .content {
   flex: 1;
-  padding: 40px;
 }
 
 /* Footer Profesional */
@@ -305,11 +324,77 @@ const showContact = ref(false)
   color: #0f172a;
 }
 
+/* Mobile Footer Styles */
+.mobile-footer {
+  display: none;
+}
+
+.mobile-footer-toggle {
+  background: none;
+  border: none;
+  width: 100%;
+  padding: 12px 0;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+.mobile-footer-toggle:hover {
+  color: #0f172a;
+}
+
+.toggle-icon {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
+.toggle-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.mobile-footer-content {
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.mobile-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mobile-footer-link {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.mobile-footer-link:hover {
+  color: #0f172a;
+}
+
+.mobile-footer-version {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
 @media (max-width: 768px) {
   .layout {
     background: #f8fafc;
     border-radius: 12px;
-    margin: 12px;
     min-height: calc(100vh - 24px);
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     border: 1px solid #e2e8f0;
@@ -325,14 +410,12 @@ const showContact = ref(false)
     padding: 12px 20px;
   }
   
-  .footer-content {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
+  .desktop-footer {
+    display: none;
   }
   
-  .footer-center {
-    order: -1;
+  .mobile-footer {
+    display: block;
   }
   
   .modal-content {
@@ -352,7 +435,6 @@ const showContact = ref(false)
 
 @media (max-width: 480px) {
   .layout {
-    margin: 8px;
     border-radius: 8px;
     min-height: calc(100vh - 16px);
   }
@@ -365,19 +447,18 @@ const showContact = ref(false)
     padding: 10px 16px;
   }
   
-  .footer-center {
-    flex-direction: column;
-    gap: 8px;
+  .mobile-footer-toggle {
+    font-size: 11px;
+    padding: 10px 0;
   }
   
-  .footer-center > :nth-child(odd) {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .mobile-footer-link {
+    font-size: 11px;
+    padding: 6px 0;
   }
   
-  .divider {
-    display: none;
+  .mobile-footer-version {
+    font-size: 10px;
   }
   
   .modal-content {

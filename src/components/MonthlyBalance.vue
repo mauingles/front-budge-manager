@@ -10,7 +10,7 @@
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
-            <span class="group-name">EQUIPO {{ selectedGroup.name.toUpperCase() }}</span>
+            <span class="group-name">Balance del grupo {{ selectedGroup.name.charAt(0).toUpperCase() + selectedGroup.name.slice(1).toLowerCase() }}</span>
           </div>
           <div class="group-row" v-else>
             <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -19,17 +19,11 @@
               <line x1="9" y1="9" x2="9.01" y2="9"/>
               <line x1="15" y1="9" x2="15.01" y2="9"/>
             </svg>
-            <span class="group-name">TODAS LAS TRANSACCIONES</span>
+            <span class="group-name">Balance de todas las transacciones</span>
           </div>
         </div>
       </div>
       
-      <div class="balance-display">
-        <span class="balance-label">Balance</span>
-        <span :class="['balance-amount', balanceClass]">
-          ${{ balance }}
-        </span>
-      </div>
     </div>
 
     <div class="visual-summary">
@@ -47,44 +41,50 @@
         </div>
         <div class="progress-labels">
           <span class="progress-start">Ingresos: {{ incomePercentage }}%</span>
-          <span class="progress-end">Egresos: {{ expensePercentage }}%</span>
+          <span class="progress-end">Gastos: {{ expensePercentage }}%</span>
         </div>
       </div>
 
       <!-- Métricas compactas -->
       <div class="metrics-grid">
         <div class="metric-card income-card">
-          <div class="metric-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/>
-              <polyline points="17,6 23,6 23,12"/>
-            </svg>
-            <span class="metric-title">Ingresos</span>
+          <div class="metric-content">
+            <div class="metric-header">
+              <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23,6 13.5,15.5 8.5,10.5 1,18"/>
+                <polyline points="17,6 23,6 23,12"/>
+              </svg>
+              <span class="metric-title">Ingresos</span>
+            </div>
+            <div class="metric-value">+${{ totalIncome }}</div>
           </div>
-          <div class="metric-value">+${{ totalIncome }}</div>
         </div>
         
         <div class="metric-card expense-card">
-          <div class="metric-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="23,18 13.5,8.5 8.5,13.5 1,6"/>
-              <polyline points="17,18 23,18 23,12"/>
-            </svg>
-            <span class="metric-title">Egresos</span>
+          <div class="metric-content">
+            <div class="metric-header">
+              <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23,18 13.5,8.5 8.5,13.5 1,6"/>
+                <polyline points="17,18 23,18 23,12"/>
+              </svg>
+              <span class="metric-title">Gastos</span>
+            </div>
+            <div class="metric-value">-${{ totalExpenses }}</div>
           </div>
-          <div class="metric-value">-${{ totalExpenses }}</div>
         </div>
         
         <div class="metric-card balance-card">
-          <div class="metric-header">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 1v22"/>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              <circle cx="12" cy="12" r="1"/>
-            </svg>
-            <span class="metric-title">Saldo</span>
+          <div class="metric-content">
+            <div class="metric-header">
+              <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1v22"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                <circle cx="12" cy="12" r="1"/>
+              </svg>
+              <span class="metric-title">Saldo</span>
+            </div>
+            <div :class="['metric-value', saldoClass]">{{ balanceDisplay }}</div>
           </div>
-          <div :class="['metric-value', saldoClass]">{{ balanceDisplay }}</div>
         </div>
       </div>
     </div>
@@ -109,7 +109,7 @@ const currentMonth = computed(() => {
 const balance = computed(() => props.totalIncome - props.totalExpenses)
 
 const balanceClass = computed(() => 
-  balance.value >= 0 ? 'positive' : 'negative'
+  balance.value < 0 ? 'negative' : ''
 )
 
 // Para la barra de progreso visual - proporcional al total
@@ -142,35 +142,27 @@ const saldoClass = computed(() => {
   else if (balance.value <= -props.totalExpenses && props.totalExpenses > 0) {
     return 'critical' // Rojo
   }
-  // En todos los demás casos
+  // En todos los demás casos: normal positivo (verde) o normal negativo (rojo)
   else {
-    return 'normal' // Amarillo
+    return balance.value >= 0 ? 'normal-positive' : 'normal-negative'
   }
 })
 </script>
 
 <style scoped>
 .balance {
-  background: rgba(255, 255, 255, 0.95);
-  color: #334155;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-2xl);
+  margin-bottom: var(--spacing-2xl);
+  box-shadow: var(--shadow-sm);
   position: relative;
-  overflow: hidden;
 }
 
 .balance::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-  pointer-events: none;
+  display: none;
 }
 
 .header-section {
@@ -212,7 +204,6 @@ const saldoClass = computed(() => {
   color: #64748b;
   font-weight: 700;
   letter-spacing: 0.5px;
-  text-transform: uppercase;
 }
 
 .calendar-icon, .group-icon {
@@ -247,7 +238,7 @@ const saldoClass = computed(() => {
 }
 
 .balance-amount.negative {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .visual-summary {
@@ -260,9 +251,9 @@ const saldoClass = computed(() => {
 }
 
 .progress-bar {
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 4px;
+  height: 6px;
+  background: #e1e5e9;
+  border-radius: 3px;
   position: relative;
   overflow: hidden;
   margin-bottom: 8px;
@@ -270,8 +261,8 @@ const saldoClass = computed(() => {
 
 .income-bar {
   height: 100%;
-  background: linear-gradient(90deg, #22c55e, #16a34a);
-  border-radius: 4px;
+  background: var(--color-success);
+  border-radius: 3px;
   position: absolute;
   left: 0;
   top: 0;
@@ -280,8 +271,8 @@ const saldoClass = computed(() => {
 
 .expense-bar {
   height: 100%;
-  background: linear-gradient(90deg, #ef4444, #dc2626);
-  border-radius: 4px;
+  background: #ee0000;
+  border-radius: 3px;
   position: absolute;
   right: 0;
   top: 0;
@@ -305,20 +296,51 @@ const saldoClass = computed(() => {
 }
 
 .metric-card {
-  background: rgba(248, 250, 252, 0.8);
-  border-radius: 8px;
-  padding: 16px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  border: 1px solid;
+  transition: var(--transition-base);
   min-width: 0;
   overflow: hidden;
 }
 
 .metric-card:hover {
-  background: #f8fafc;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border-color: #cbd5e1;
+  box-shadow: var(--shadow-md);
+}
+
+.income-card {
+  background: #f9fefb;
+  border-color: #86efac;
+}
+
+.income-card:hover {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.expense-card {
+  background: #fefbfb;
+  border-color: #fca5a5;
+}
+
+.expense-card:hover {
+  background: #fef2f2;
+  border-color: #ee0000;
+}
+
+.balance-card {
+  background: #fbfcff;
+  border-color: #93c5fd;
+}
+
+.balance-card:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.metric-content {
+  display: flex;
+  flex-direction: column;
 }
 
 .metric-header {
@@ -351,23 +373,27 @@ const saldoClass = computed(() => {
 }
 
 .income-card .metric-value {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .expense-card .metric-value {
-  color: #ef4444; /* Rojo para egresos */
+  color: var(--color-danger);
 }
 
 .balance-card .metric-value.excellent {
-  color: #22c55e; /* Verde: saldo >= 100% del ingreso */
+  color: var(--color-success);
 }
 
 .balance-card .metric-value.critical {
-  color: #ef4444; /* Rojo: saldo <= -100% del egreso */
+  color: var(--color-danger);
 }
 
-.balance-card .metric-value.normal {
-  color: #fbbf24; /* Amarillo: casos normales */
+.balance-card .metric-value.normal-positive {
+  color: var(--color-success);
+}
+
+.balance-card .metric-value.normal-negative {
+  color: var(--color-danger);
 }
 
 @media (max-width: 768px) {
@@ -427,16 +453,26 @@ const saldoClass = computed(() => {
   }
   
   .metric-card {
-    padding: 16px;
+    padding: 12px;
     min-height: auto;
+  }
+  
+  .metric-content {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     justify-content: space-between;
   }
   
+  .metric-header {
+    margin-bottom: 0;
+    flex: 1;
+  }
+  
   .metric-value {
-    font-size: 18px;
+    font-size: 16px;
     line-height: 1.2;
+    margin-left: 8px;
   }
 }
 </style>

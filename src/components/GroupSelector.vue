@@ -12,7 +12,7 @@
         @click="selectGroup(null)" 
         :class="['group-option', { 'selected': !selectedGroup }]"
       >
-        Todos los equipos
+        Todos los grupos
       </div>
       <div 
         v-for="group in availableGroups" 
@@ -39,7 +39,7 @@ const showDropdown = ref(false)
 const selectedGroup = ref(props.modelValue)
 
 const selectedGroupName = computed(() => {
-  if (!selectedGroup.value) return 'Todos los equipos'
+  if (!selectedGroup.value) return 'Todos los grupos'
   return selectedGroup.value.name
 })
 

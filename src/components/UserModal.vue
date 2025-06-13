@@ -27,6 +27,24 @@
           Cambiar Contraseña
         </button>
 
+        <button @click="refreshUserData" class="action-compact">
+          <svg class="icon-compact" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 4v6h6"/>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+          </svg>
+          Actualizar Datos
+        </button>
+
+        <button v-if="canManageUsers" @click="showUserManagement = true" class="action-compact admin-compact">
+          <svg class="icon-compact" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Gestionar Usuarios
+        </button>
+
         <button @click="handleLogout" class="logout action-compact">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -96,22 +114,58 @@
         </div>
       </form>
     </BaseModal>
+    
+    <!-- Modal de gestión de usuarios (solo para admin/superadmin) -->
+    <BaseModal :show="showUserManagement" @close="showUserManagement = false">
+      <div class="user-management-modal">
+        <h3>Gestión de Usuarios</h3>
+        <div class="users-list">
+          <div v-for="user in manageableUsers" :key="user.id" class="user-item">
+            <div class="user-info">
+              <span class="username">{{ user.username }}</span>
+              <span class="user-email">{{ user.email }}</span>
+              <span class="role-badge">{{ getRoleDisplay(user.role) }}</span>
+            </div>
+            <div class="user-actions">
+              <button @click="resetUserPassword(user)" class="action-btn reset-btn" title="Restablecer contraseña">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <circle cx="12" cy="16" r="1"/>
+                  <path d="m7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </button>
+              <button @click="deleteUser(user)" class="action-btn delete-btn" title="Eliminar usuario">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                  <path d="M3 6h18"/>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c-1 0 2 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div v-if="!manageableUsers.length" class="empty-users">
+            No hay usuarios para gestionar
+          </div>
+        </div>
+      </div>
+    </BaseModal>
   </BaseModal>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import BaseModal from './BaseModal.vue'
 import BaseInput from './BaseInput.vue'
 import { useNotifications } from '@/composables/useNotifications.js'
 
-const props = defineProps(['show', 'currentUser'])
-const emit = defineEmits(['close', 'change-password', 'change-username'])
+const props = defineProps(['show', 'currentUser', 'allUsers'])
+const emit = defineEmits(['close', 'change-password', 'change-username', 'reset-user-password', 'delete-user', 'refresh-user-data'])
 
 const { addNotification } = useNotifications()
 
 const showUsernameChange = ref(false)
 const showPasswordReset = ref(false)
+const showUserManagement = ref(false)
 const newUsername = ref('')
 
 const passwordForm = reactive({
@@ -182,6 +236,48 @@ const handlePasswordChange = () => {
   passwordForm.newPassword = ''
   passwordForm.confirmPassword = ''
   showPasswordReset.value = false
+}
+
+// Computed properties para gestión de usuarios
+const canManageUsers = computed(() => {
+  if (!props.currentUser) return false
+  return props.currentUser.role === 'admin' || props.currentUser.role === 'superadmin'
+})
+
+const manageableUsers = computed(() => {
+  if (!props.allUsers || !props.currentUser) return []
+  
+  const currentUserRole = props.currentUser.role
+  
+  return props.allUsers.filter(user => {
+    // No puede gestionar a sí mismo
+    if (user.id === props.currentUser.id) return false
+    
+    // SuperAdmin puede gestionar admin y user
+    if (currentUserRole === 'superadmin') {
+      return user.role === 'admin' || user.role === 'user'
+    }
+    
+    // Admin solo puede gestionar user
+    if (currentUserRole === 'admin') {
+      return user.role === 'user'
+    }
+    
+    return false
+  })
+})
+
+// Funciones para gestión de usuarios
+const resetUserPassword = (user) => {
+  emit('reset-user-password', user.id)
+}
+
+const deleteUser = (user) => {
+  emit('delete-user', user.id)
+}
+
+const refreshUserData = () => {
+  emit('refresh-user-data')
 }
 
 </script>
@@ -484,5 +580,110 @@ const handlePasswordChange = () => {
 
 .logout { 
   color: red;
+}
+
+/* Estilos para gestión de usuarios */
+.user-management-modal {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.user-management-modal h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  text-align: center;
+}
+
+.users-list {
+  max-height: 400px;
+  overflow-y: auto;
+  gap: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.user-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.username {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.user-email {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.role-badge {
+  background: #64748b;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.user-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.action-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #64748b;
+}
+
+.reset-btn:hover {
+  background: rgba(240, 249, 255, 0.9);
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.delete-btn:hover {
+  background: rgba(254, 242, 242, 0.9);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.empty-users {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 14px;
 }
 </style>

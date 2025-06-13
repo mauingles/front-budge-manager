@@ -10,7 +10,10 @@
       "Bash(pkill:*)",
       "Bash(rm:*)",
       "Bash(sed:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run build:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

@@ -14,8 +14,8 @@
     <BaseModal :show="showModal" @close="closeModal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Equipos</h3>
-          <p class="modal-subtitle">Selecciona un equipo para filtrar las transacciones</p>
+          <h3>Grupos</h3>
+          <p class="modal-subtitle">Selecciona un grupo para filtrar las transacciones</p>
         </div>
         
         <div class="groups-list">
@@ -33,7 +33,7 @@
             </div>
             <div class="group-info">
               <span class="group-name">Todas las transacciones</span>
-              <span class="group-desc">Sin filtro de equipo</span>
+              <span class="group-desc">Sin filtro de grupo</span>
             </div>
             <div v-if="!selectedGroup" class="check-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -83,7 +83,7 @@ const showModal = ref(false)
 const selectedGroup = ref(props.modelValue)
 
 const selectedGroupName = computed(() => {
-  return 'Equipos'
+  return 'Grupos'
 })
 
 const selectGroup = (group) => {

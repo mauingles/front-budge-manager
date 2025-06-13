@@ -31,7 +31,7 @@ const { notifications, removeNotification } = useNotifications()
   position: fixed !important;
   top: 10px !important;
   right: 15px !important;
-  z-index: 3 !important;
+  z-index: 999999999999999 !important;
   display: flex;
   flex-direction: column;
   gap: 4px;
