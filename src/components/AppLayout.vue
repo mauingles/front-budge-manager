@@ -122,7 +122,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 
 const showTerms = ref(false)
 const showPrivacy = ref(false) 
@@ -131,6 +131,17 @@ const showMobileFooter = ref(false)
 
 const toggleMobileFooter = () => {
   showMobileFooter.value = !showMobileFooter.value
+
+  // Si se está expandiendo el footer, hacer scroll hacia abajo
+  if (showMobileFooter.value) {
+    // Usar nextTick para asegurar que el DOM se haya actualizado
+    nextTick(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      })
+    })
+  }
 }
 </script>
 
@@ -338,9 +349,10 @@ const toggleMobileFooter = () => {
   color: #64748b;
   cursor: pointer;
   display: flex;
-  justify-content: space-between;
+  justify-content: space-evenly;
   align-items: center;
   transition: color 0.2s ease;
+  
 }
 
 .mobile-footer-toggle:hover {
@@ -367,6 +379,8 @@ const toggleMobileFooter = () => {
   flex-direction: column;
   gap: 8px;
   margin-bottom: 12px;
+  justify-content: center;
+  align-items: center;
 }
 
 .mobile-footer-link {
