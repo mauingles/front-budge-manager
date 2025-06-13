@@ -18,6 +18,7 @@
         
         <div class="groups-list">
           <div 
+            v-if="canViewAllTransactions"
             @click="selectGroup(null)" 
             :class="['group-item', { 'selected': !selectedGroup }]"
           >
@@ -74,7 +75,7 @@
 import { ref, computed, watch } from 'vue'
 import BaseModal from './BaseModal.vue'
 
-const props = defineProps(['modelValue', 'availableGroups'])
+const props = defineProps(['modelValue', 'availableGroups', 'currentUser'])
 const emit = defineEmits(['update:modelValue'])
 
 const showModal = ref(false)
@@ -83,6 +84,10 @@ const selectedGroup = ref(props.modelValue)
 // Sincronizar con props cuando cambien externamente
 watch(() => props.modelValue, (newValue) => {
   selectedGroup.value = newValue
+})
+
+const canViewAllTransactions = computed(() => {
+  return props.currentUser?.role === 'admin' || props.currentUser?.role === 'superadmin'
 })
 
 const selectedGroupName = computed(() => {

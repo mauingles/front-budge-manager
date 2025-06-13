@@ -66,6 +66,7 @@
           :selected-month="selectedMonth"
           :selected-group="selectedGroup"
           :available-groups="userGroups"
+          :current-user="currentUser"
           @update:selectedGroup="handleGroupChange" />
         
         <BaseCard>
@@ -372,7 +373,8 @@ const loadData = async () => {
       currentUser.value = user
       
       // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
-      if (!selectedGroup.value) {
+      // Para usuarios regulares, siempre debe haber un grupo seleccionado
+      if (!selectedGroup.value || (user.role === 'user' && !selectedGroup.value)) {
         const userDefaultGroup = groups.value.find(g => 
           g.createdBy === user.id && g.name === 'Mis finanzas'
         )
@@ -441,7 +443,8 @@ watch(firebaseUser, async (newFirebaseUser) => {
       currentUser.value = existingUser
       
       // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
-      if (!selectedGroup.value) {
+      // Para usuarios regulares, siempre debe haber un grupo seleccionado
+      if (!selectedGroup.value || (existingUser.role === 'user' && !selectedGroup.value)) {
         const userDefaultGroup = groups.value.find(g => 
           g.createdBy === existingUser.id && g.name === 'Mis finanzas'
         )

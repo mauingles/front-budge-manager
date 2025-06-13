@@ -82,7 +82,7 @@
           <!-- Selector de Grupo -->
           <div class="field">
             <label>Seleccionar Grupo</label>
-            <select v-model="selectedGroupForInvite" class="select" required>
+            <select v-model="selectedGroupForInvite" class="select" required @change="handleGroupSelection">
               <option value="">Selecciona un grupo...</option>
               <option 
                 v-for="group in ownedGroups" 
@@ -299,12 +299,14 @@ import BaseModal from './BaseModal.vue'
 import BaseInput from './BaseInput.vue'
 import BaseButton from './BaseButton.vue'
 import { useConfirm } from '@/composables/useConfirm.js'
+import { useNotifications } from '@/composables/useNotifications.js'
 
 const props = defineProps(['show', 'currentUser', 'userGroups', 'allGroups', 'allUsers'])
 const emit = defineEmits(['close', 'create-group', 'join-group', 'remove-member', 'generate-new-code', 'leave-group', 'delete-group', 'hide-group', 'unhide-group'])
 
-// Confirmaciones
+// Confirmaciones y notificaciones
 const { confirm } = useConfirm()
+const { addNotification } = useNotifications()
 
 // Estado
 const activeTab = ref('create')
@@ -374,6 +376,14 @@ const createGroup = () => {
   newGroupName.value = ''
   newGroupDescription.value = ''
   showMessage('Grupo creado exitosamente', 'success')
+}
+
+const handleGroupSelection = () => {
+  if (selectedGroupForInvite.value && selectedGroupForInvite.value.name === 'Mis finanzas') {
+    // Mostrar notificación y resetear selección
+    addNotification('Este grupo es solo de uso personal, para compartir debes crear un grupo nuevo.', 'error')
+    selectedGroupForInvite.value = ''
+  }
 }
 
 const joinGroup = () => {

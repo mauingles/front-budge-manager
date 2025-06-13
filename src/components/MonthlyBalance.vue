@@ -7,6 +7,7 @@
             <GroupSelectorModal 
               v-model="internalSelectedGroup" 
               :available-groups="availableGroups"
+              :current-user="currentUser"
               @update:modelValue="handleGroupChange"
             />
           </div>
@@ -84,7 +85,7 @@
 import { computed, ref, watch } from 'vue'
 import GroupSelectorModal from './GroupSelectorModal.vue'
 
-const props = defineProps(['totalIncome', 'totalExpenses', 'selectedMonth', 'selectedGroup', 'availableGroups'])
+const props = defineProps(['totalIncome', 'totalExpenses', 'selectedMonth', 'selectedGroup', 'availableGroups', 'currentUser'])
 const emit = defineEmits(['update:selectedGroup'])
 
 // Estado interno para el grupo seleccionado
