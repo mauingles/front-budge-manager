@@ -27,12 +27,22 @@
           Cambiar Contraseña
         </button>
 
-        <button @click="refreshUserData" class="action-compact">
+        <button v-if="canManageUsers" @click="refreshUserData" class="action-compact">
           <svg class="icon-compact" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M1 4v6h6"/>
             <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
           </svg>
           Actualizar Datos
+        </button>
+
+        <button @click="openGroupManagement" class="action-compact">
+          <svg class="icon-compact" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Gestionar Grupos
         </button>
 
         <button v-if="canManageUsers" @click="showUserManagement = true" class="action-compact admin-compact">
@@ -159,7 +169,7 @@ import BaseInput from './BaseInput.vue'
 import { useNotifications } from '@/composables/useNotifications.js'
 
 const props = defineProps(['show', 'currentUser', 'allUsers'])
-const emit = defineEmits(['close', 'change-password', 'change-username', 'reset-user-password', 'delete-user', 'refresh-user-data'])
+const emit = defineEmits(['close', 'change-password', 'change-username', 'reset-user-password', 'delete-user', 'refresh-user-data', 'open-group-management'])
 
 const { addNotification } = useNotifications()
 
@@ -278,6 +288,11 @@ const deleteUser = (user) => {
 
 const refreshUserData = () => {
   emit('refresh-user-data')
+}
+
+// Función para abrir gestión de grupos
+const openGroupManagement = () => {
+  emit('open-group-management')
 }
 
 </script>

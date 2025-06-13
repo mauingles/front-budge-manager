@@ -2,10 +2,8 @@
   <div class="group-selector-modal">
     <button @click="showModal = true" class="btn btn-group">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        <path d="M12 1v22"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
       </svg>
      {{ selectedGroupName }}
     </button>
@@ -73,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import BaseModal from './BaseModal.vue'
 
 const props = defineProps(['modelValue', 'availableGroups'])
@@ -82,8 +80,16 @@ const emit = defineEmits(['update:modelValue'])
 const showModal = ref(false)
 const selectedGroup = ref(props.modelValue)
 
+// Sincronizar con props cuando cambien externamente
+watch(() => props.modelValue, (newValue) => {
+  selectedGroup.value = newValue
+})
+
 const selectedGroupName = computed(() => {
-  return 'Grupos'
+  if (props.modelValue) {
+    return `Balance del grupo ${props.modelValue.name}`
+  }
+  return 'Balance de todas las transacciones'
 })
 
 const selectGroup = (group) => {
@@ -100,18 +106,29 @@ const closeModal = () => {
 <style scoped>
 .group-selector-modal {
   position: relative;
+  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .btn-group {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  color: #3b82f6;
-  width: 100%;
+  border-color: #6b7280;
+  background: #f3f4f6;
+  color: #374151;
+  width: 100% !important;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .btn-group:hover {
-  border-color: #2563eb;
-  background: #dbeafe;
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #3b82f6;
 }
 
 .modal-content {
@@ -241,6 +258,17 @@ const closeModal = () => {
 }
 
 @media (max-width: 480px) {
+  .btn-group {
+    font-size: 11px !important;
+    padding: 8px 6px !important;
+    gap: 4px !important;
+  }
+  
+  .btn-group svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
   .modal-content {
     max-width: 100%;
   }

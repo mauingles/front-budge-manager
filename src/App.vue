@@ -12,6 +12,14 @@
     <!-- App principal si está autenticado -->
     <div v-else-if="currentUser && !authLoading" class="main-app">
       <header class="header whatsapp-header">
+        <!-- Botón perfil flotante solo en móvil -->
+        <button @click="showUserModal = true" class="btn-profile-mobile" title="Perfil de usuario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </button>
+        
         <div class="header-title">
           <svg class="app-icon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
@@ -35,19 +43,13 @@
             </svg>
             Gastos
           </button>
-          <GroupSelectorModal 
-            v-model="selectedGroup" 
-            :available-groups="userGroups" 
+          <ExpenseDivisionModal 
+            :selected-group="selectedGroup"
+            :transactions="transactions"
+            :selected-month="selectedMonth"
+            @division-change="handleDivisionChange"
           />
           <DatePicker v-model="selectedMonth" />
-          <button @click="openGroupModal" class="btn" title="Grupos">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-          </button>
           <button @click="showUserModal = true" class="btn" title="Perfil de usuario">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -62,7 +64,9 @@
           :total-income="totalIncome" 
           :total-expenses="totalExpenses"
           :selected-month="selectedMonth"
-          :selected-group="selectedGroup" />
+          :selected-group="selectedGroup"
+          :available-groups="userGroups"
+          @update:selectedGroup="handleGroupChange" />
         
         <BaseCard>
           <h3>
@@ -97,7 +101,8 @@
         :is-editing="editing"
         :available-groups="userGroups"
         :preselected-group="selectedGroup"
-        @submit="saveTransaction" />
+        @submit="saveTransaction"
+        @create-group="handleCreateGroupFromTransaction" />
     </BaseModal>
     
     <UserModal 
@@ -112,6 +117,7 @@
       @reset-user-password="handleUserPasswordReset"
       @delete-user="handleDeleteUser"
       @refresh-user-data="refreshUserData"
+      @open-group-management="openGroupManagement"
       @logout="handleLogout" />
     
     <GroupManagementModal 
@@ -165,6 +171,7 @@ import BaseModal from './components/BaseModal.vue'
 import TransactionForm from './components/TransactionForm.vue'
 import DatePicker from './components/DatePicker.vue'
 import GroupSelectorModal from './components/GroupSelectorModal.vue'
+import ExpenseDivisionModal from './components/ExpenseDivisionModal.vue'
 import LoginForm from './components/LoginForm.vue'
 import UserModal from './components/UserModal.vue'
 import GroupManagementModal from './components/GroupManagementModal.vue'
@@ -349,6 +356,10 @@ const loadData = async () => {
           password: null
         }
         users.value.push(user)
+        
+        // Crear grupo por defecto "Mis finanzas" para el nuevo usuario y seleccionarlo
+        const defaultGroup = createDefaultGroup(user)
+        selectedGroup.value = defaultGroup
       } else {
         // Usuario existente: sincronizar datos de Firebase con los datos del servidor
         user.photoURL = firebaseUser.value.photoURL
@@ -359,6 +370,18 @@ const loadData = async () => {
         // El rol se mantiene desde el servidor (no se sobrescribe)
       }
       currentUser.value = user
+      
+      // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
+      if (!selectedGroup.value) {
+        const userDefaultGroup = groups.value.find(g => 
+          g.createdBy === user.id && g.name === 'Mis finanzas'
+        )
+        if (userDefaultGroup) {
+          selectedGroup.value = userDefaultGroup
+          console.log(`✅ Grupo "Mis finanzas" seleccionado automáticamente para ${user.email}`)
+        }
+      }
+      
       handleGroupCode();
     } else {
       currentUser.value = null
@@ -416,6 +439,18 @@ watch(firebaseUser, async (newFirebaseUser) => {
         existingUser.username = newFirebaseUser.displayName
       }
       currentUser.value = existingUser
+      
+      // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
+      if (!selectedGroup.value) {
+        const userDefaultGroup = groups.value.find(g => 
+          g.createdBy === existingUser.id && g.name === 'Mis finanzas'
+        )
+        if (userDefaultGroup) {
+          selectedGroup.value = userDefaultGroup
+          console.log(`✅ Grupo "Mis finanzas" seleccionado automáticamente para ${existingUser.email}`)
+        }
+      }
+      
       console.log('✅ Usuario Google existente sincronizado:', existingUser.email, 'Role:', existingUser.role)
     } else {
       // Nuevo usuario de Firebase (no debería pasar después de loadData, pero por seguridad)
@@ -432,6 +467,11 @@ watch(firebaseUser, async (newFirebaseUser) => {
       
       users.value.push(newUser)
       currentUser.value = newUser
+      
+      // Crear grupo por defecto "Mis finanzas" para el nuevo usuario y seleccionarlo
+      const defaultGroup = createDefaultGroup(newUser)
+      selectedGroup.value = defaultGroup
+      
       console.log('✅ Nuevo usuario Google creado:', newUser.email, 'Role:', newUser.role)
     }
   } else if (!newFirebaseUser && currentUser.value?.isGoogleUser) {
@@ -508,8 +548,35 @@ const openForm = (type) => {
   showModal.value = true
 }
 
-const openGroupModal = () => {
+const openGroupManagement = () => {
+  showUserModal.value = false // Cerrar el modal de usuario
+  showGroupManagementModal.value = true // Abrir gestión de grupos
+}
+
+const handleCreateGroupFromTransaction = () => {
+  // Cerrar el modal de transacción
+  showModal.value = false
+  // Abrir el modal de gestión de grupos
   showGroupManagementModal.value = true
+}
+
+const handleGroupChange = (newGroup) => {
+  selectedGroup.value = newGroup
+}
+
+const handleDivisionChange = (divisionType) => {
+  console.log('División seleccionada:', divisionType)
+  addNotification(`División seleccionada: ${getDivisionDisplayName(divisionType)}`, 'success')
+}
+
+const getDivisionDisplayName = (type) => {
+  switch(type) {
+    case 'equal': return 'Todos por igual'
+    case 'percentage': return 'Por porcentaje'
+    case 'custom': return 'Montos específicos'
+    case 'none': return 'Sin dividir'
+    default: return 'Desconocido'
+  }
 }
 
 const getRoleDisplay = (role) => {
@@ -546,12 +613,9 @@ const saveTransaction = (transaction) => {
     // Editar transacción existente - verificar permisos
     const existingTransaction = transactions.value.find(t => t.id === editingTransaction.value.id)
     
-    // Verificar si el usuario puede editar esta transacción
-    const canEdit = existingTransaction.userId === currentUser.value.id ||
-                   (existingTransaction.groupId && hasGroupAccess(existingTransaction.groupId))
-    
-    if (!canEdit) {
-      addNotification('No tienes permisos para editar esta transacción', 'error')
+    // Verificar que solo el creador pueda editar
+    if (existingTransaction.userId !== currentUser.value.id) {
+      addNotification('Solo el creador puede editar esta transacción', 'error')
       return
     }
     
@@ -592,6 +656,12 @@ const saveTransaction = (transaction) => {
 }
 
 const editTransaction = (transaction) => {
+  // Verificar que solo el creador pueda editar
+  if (transaction.userId !== currentUser.value.id) {
+    addNotification('Solo el creador puede editar esta transacción', 'error')
+    return
+  }
+  
   editing.value = true
   editingTransaction.value = transaction
   formType.value = transaction.type
@@ -599,9 +669,21 @@ const editTransaction = (transaction) => {
 }
 
 const deleteTransaction = async (transactionId) => {
+  // Verificar que solo el creador pueda eliminar
+  const transaction = transactions.value.find(t => t.id === transactionId)
+  if (!transaction) {
+    addNotification('Transacción no encontrada', 'error')
+    return
+  }
+  
+  if (transaction.userId !== currentUser.value.id) {
+    addNotification('Solo el creador puede eliminar esta transacción', 'error')
+    return
+  }
+  
   const confirmed = await confirm({
-    title: 'Eliminar',
-    message: '¿Eliminar esta transacción?',
+    title: '¿Eliminar esta transacción?',
+    message: ' ',
     confirmText: 'Eliminar',
     cancelText: 'Cancelar',
     type: 'danger'
@@ -609,7 +691,7 @@ const deleteTransaction = async (transactionId) => {
   
   if (confirmed) {
     transactions.value = transactions.value.filter(t => t.id !== transactionId)
-    
+    addNotification('Transacción eliminada correctamente', 'success', 2000)
   }
 }
 
@@ -803,6 +885,13 @@ const handleCreateGroup = (groupData) => {
   
   groups.value.push(newGroup)
   
+  // If we were in the transaction modal, select the new group and reopen the modal
+  if (showGroupManagementModal.value && !showModal.value) {
+    selectedGroup.value = newGroup
+    showGroupManagementModal.value = false
+    showModal.value = true
+  }
+  
 }
 
 const handleJoinGroup = (inviteCode) => {
@@ -843,6 +932,40 @@ const handleRemoveMember = ({ groupId, memberId }) => {
 
 const generateInviteCode = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase()
+}
+
+// Función para crear grupo por defecto "Mis finanzas" para nuevos usuarios
+const createDefaultGroup = (user) => {
+  // Verificar si el usuario ya tiene un grupo "Mis finanzas"
+  const existingGroup = groups.value.find(g => 
+    g.createdBy === user.id && g.name === 'Mis finanzas'
+  )
+  
+  if (existingGroup) {
+    console.log(`ℹ️ Usuario ${user.email} ya tiene un grupo "Mis finanzas"`)
+    return existingGroup
+  }
+  
+  const defaultGroup = {
+    id: Date.now() + Math.random(), // ID único
+    name: 'Mis finanzas',
+    description: 'Grupo personal para gestionar mis finanzas',
+    createdBy: user.id,
+    createdAt: new Date().toISOString(),
+    inviteCode: null, // Sin código de invitación para grupos personales
+    members: [
+      {
+        id: user.id,
+        username: user.username || user.email?.split('@')[0],
+        role: 'admin'
+      }
+    ]
+  }
+  
+  groups.value.push(defaultGroup)
+  console.log(`✅ Grupo por defecto "Mis finanzas" creado para ${user.email}`)
+  
+  return defaultGroup
 }
 
 const handleGenerateNewCode = (groupId) => {
@@ -1013,8 +1136,8 @@ const processInvitation = (inviteCode) => {
 }
 
 .app-icon {
-  width: 32px;
-  height: 32px;
+  width: 45px;
+  height: 45px;
   color: var(--text-primary);
   background: transparent;
   border-radius: var(--border-radius-md);
@@ -1024,7 +1147,7 @@ const processInvitation = (inviteCode) => {
 
 .header h1 {
   color: var(--text-primary);
-  font-size: var(--font-size-2xl);
+  font-size: 26px;
   font-weight: var(--font-weight-semibold);
   letter-spacing: -0.025em;
   margin: 0;
@@ -1118,6 +1241,11 @@ h3 {
   gap: var(--spacing-sm);
 }
 
+/* Ocultar botón flotante en desktop por defecto */
+.btn-profile-mobile {
+  display: none;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .header {
@@ -1125,6 +1253,7 @@ h3 {
     padding: var(--spacing-lg);
     gap: var(--spacing-md);
     align-items: stretch;
+    position: relative;
   }
   
   .header h1 {
@@ -1143,11 +1272,53 @@ h3 {
   
   .actions > button:nth-child(1) { grid-column: 1; grid-row: 1; }
   .actions > button:nth-child(2) { grid-column: 2; grid-row: 1; }
-  .actions > button:nth-child(3) { grid-column: 1; grid-row: 2; }
-  .actions > select:nth-child(4) { grid-column: 2; grid-row: 2; }
-  .actions > *:nth-child(5) { grid-column: 1; grid-row: 3; }
-  .actions > button:nth-child(6) { grid-column: 2; grid-row: 3; }
-  .actions > button:nth-child(7) { grid-column: 2; grid-row: 3; }
+  .actions > *:nth-child(3) { grid-column: 1; grid-row: 2; }
+  .actions > *:nth-child(4) { grid-column: 2; grid-row: 2; }
+  .actions > button:nth-child(5) { 
+    display: none; /* Ocultar el botón perfil del grid en móvil */
+  }
+
+  .header-title {
+    margin-bottom: 13px;
+    margin-top: -10px;
+  }
+  
+  .app-icon {
+    width: 32px;
+    height: 32px;
+  }
+  /* Botón perfil flotante visible en móvil */
+  .btn-profile-mobile {
+    display: flex !important;
+    position: absolute;
+    top: 0px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition: var(--transition-base);
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .btn-profile-mobile:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+    transform: scale(1.05);
+  }
+  
+  .btn-profile-mobile svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
   
   .dashboard {
     padding: var(--spacing-lg);
@@ -1208,15 +1379,9 @@ h3 {
     grid-row: 2; 
   }
   
-  /* Tercera fila: Grupos y Perfil */
-  .actions > button:nth-child(5) { /* Botón Grupos */
-    grid-column: 1; 
-    grid-row: 3; 
-  }
-  
-  .actions > button:nth-child(6) { /* Botón Perfil */
-    grid-column: 2; 
-    grid-row: 3; 
+  /* Perfil de usuario fuera del grid */
+  .actions > button:nth-child(5) { /* Botón Perfil */
+    display: none; /* Ocultar en grid móvil */
   }
   
   /* Estilos para todos los botones en móvil */

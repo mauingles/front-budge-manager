@@ -29,17 +29,8 @@ defineEmits(['edit', 'delete'])
 const canEditTransaction = (transaction) => {
   if (!props.currentUser) return false
   
-  const isAdmin = props.currentUser.role === 'admin'
-  const isSuperAdmin = props.currentUser.role === 'superadmin'
-  const isOwner = transaction.userId === props.currentUser.id
-  const hasGroupPermission = transaction.groupId ? props.hasGroupAccess(transaction.groupId) : false
-  
-  // Solo puede editar si:
-  // 1. Es superadmin (acceso total), O
-  // 2. Es admin (acceso total), O
-  // 3. Es el dueño de la transacción, O
-  // 4. Es una transacción de grupo y tiene acceso al grupo
-  return isSuperAdmin || isAdmin || isOwner || (transaction.groupId && hasGroupPermission)
+  // Solo el creador de la transacción puede editarla o eliminarla
+  return transaction.userId === props.currentUser.id
 }
 
 const getGroupName = (groupId) => {

@@ -102,6 +102,7 @@ const handleCancel = () => {
   position: relative;
   margin: auto;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .confirm-close {
@@ -150,6 +151,8 @@ const handleCancel = () => {
   font-weight: 600;
   color: #1f2937;
   margin-bottom: 4px;
+  display: flex;
+  justify-content: center;
 }
 
 .confirm-message {

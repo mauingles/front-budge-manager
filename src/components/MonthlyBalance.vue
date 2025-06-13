@@ -3,23 +3,12 @@
     <div class="header-section">
       <div class="month-info">
         <div class="period-info">
-          <div class="group-row" v-if="selectedGroup">
-            <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            <span class="group-name">Balance del grupo {{ selectedGroup.name.charAt(0).toUpperCase() + selectedGroup.name.slice(1).toLowerCase() }}</span>
-          </div>
-          <div class="group-row" v-else>
-            <svg class="group-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-              <line x1="9" y1="9" x2="9.01" y2="9"/>
-              <line x1="15" y1="9" x2="15.01" y2="9"/>
-            </svg>
-            <span class="group-name">Balance de todas las transacciones</span>
+          <div class="group-row">
+            <GroupSelectorModal 
+              v-model="internalSelectedGroup" 
+              :available-groups="availableGroups"
+              @update:modelValue="handleGroupChange"
+            />
           </div>
         </div>
       </div>
@@ -92,9 +81,25 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import GroupSelectorModal from './GroupSelectorModal.vue'
 
-const props = defineProps(['totalIncome', 'totalExpenses', 'selectedMonth', 'selectedGroup'])
+const props = defineProps(['totalIncome', 'totalExpenses', 'selectedMonth', 'selectedGroup', 'availableGroups'])
+const emit = defineEmits(['update:selectedGroup'])
+
+// Estado interno para el grupo seleccionado
+const internalSelectedGroup = ref(props.selectedGroup)
+
+// Manejar cambio de grupo
+const handleGroupChange = (newGroup) => {
+  internalSelectedGroup.value = newGroup
+  emit('update:selectedGroup', newGroup)
+}
+
+// Sincronizar con props cuando cambien externamente
+watch(() => props.selectedGroup, (newGroup) => {
+  internalSelectedGroup.value = newGroup
+})
 
 const currentMonth = computed(() => {
   if (!props.selectedMonth) return ''
@@ -177,18 +182,21 @@ const saldoClass = computed(() => {
 .month-info {
   display: flex;
   align-items: flex-start;
+  width: 100%;
 }
 
 .period-info {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  width:100%;
 }
 
 .month-row, .group-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
 .month-info h2 {
@@ -474,5 +482,30 @@ const saldoClass = computed(() => {
     line-height: 1.2;
     margin-left: 8px;
   }
+}
+
+/* Personalización del GroupSelectorModal dentro del balance */
+.group-row :deep(.btn-group) {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  height: auto;
+  min-height: auto;
+}
+
+.group-row :deep(.btn-group):hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #475569;
+}
+
+.group-row :deep(.btn-group svg) {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
 }
 </style>

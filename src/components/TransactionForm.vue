@@ -28,8 +28,8 @@
     
     <div class="field">
       <label>Grupo</label>
-      <select v-model="selectedGroup" class="select">
-        <option value="">Sin grupo</option>
+      <select v-model="selectedGroup" class="select" @change="handleGroupChange">
+        <option value="create-new">+ Crear grupo</option>
         <option v-for="group in availableGroups" :key="group.id" :value="group.id">
           {{ group.name }}
         </option>
@@ -78,7 +78,7 @@ const description = ref('')
 const amount = ref('')
 const user = ref(props.currentUser || '')
 
-const emit = defineEmits(['submit'])
+const emit = defineEmits(['submit', 'create-group'])
 
 // Validation
 const isFormValid = computed(() => {
@@ -130,6 +130,16 @@ watch(() => props.preselectedGroup, (newGroup) => {
     selectedGroup.value = newGroup?.id || ''
   }
 }, { immediate: true })
+
+// Handle group change
+const handleGroupChange = (event) => {
+  if (event.target.value === 'create-new') {
+    // Reset the select to empty
+    selectedGroup.value = ''
+    // Emit event to open group creation modal
+    emit('create-group')
+  }
+}
 
 // Clear description when category changes for expenses
 watch(category, (newCategory, oldCategory) => {
