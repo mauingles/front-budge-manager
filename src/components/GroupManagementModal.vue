@@ -120,7 +120,7 @@
             <div v-else class="invite-message">
               <label>Mensaje de Invitación:</label>
               <div class="invitation-text">
-                Te invito a participar en la app <strong>https://budge-manager.netlify.app</strong> de mi grupo <strong>"{{ selectedGroupForInvite.name }}"</strong>, utilizando este código <span v-if="selectedGroupForInvite.inviteCode" class="code-inline clickable-code" @click="copyCode" title="Copiar código">{{ selectedGroupForInvite.inviteCode }}</span><span v-else class="no-code-inline">sin código activo</span>
+                Participá en mi grupo <strong>https://budge-manager.netlify.app</strong><span v-if="selectedGroupForInvite.inviteCode" class="code-inline clickable-code" @click="copyCode" title="Copiar código">{{ selectedGroupForInvite.inviteCode }}</span><span v-else class="no-code-inline">sin código activo</span>
               </div>
               <div v-if="selectedGroupForInvite.inviteCode" class="code-actions">
                 <button 
@@ -483,7 +483,7 @@ const joinGroup = () => {
 
 const copyInvitationMessage = async () => {
   try {
-    const message = `Te invito a participar en la app https://budge-manager.netlify.app/?groupCode=${selectedGroupForInvite.value.inviteCode} de mi grupo "${selectedGroupForInvite.value.name}"`
+    const message = `Participá en mi grupo https://budge-manager.netlify.app/?groupCode=${selectedGroupForInvite.value.inviteCode}`
     await navigator.clipboard.writeText(message)
     showMessage('Mensaje de invitación copiado al portapapeles', 'success')
   } catch (err) {
