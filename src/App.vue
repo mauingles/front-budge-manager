@@ -84,7 +84,7 @@
               <line x1="16" y1="17" x2="8" y2="17"/>
               <polyline points="10,9 9,9 8,9"/>
             </svg>
-            {{ getTransactionsSectionTitle() }}
+            Transacciones
           </h3>
           <TransactionList 
             :transactions="filteredTransactions" 
@@ -670,11 +670,42 @@ const handleGroupCode = async () => {
   const groupCode = url.searchParams.get('groupCode')
   if(groupCode) {
     groupCodeHandled.value = true
+    
+    // Buscar el grupo por código de invitación
     const group = groups.value.find(g => g.inviteCode === groupCode)
     if(!group) {
-      addNotification('Este código ha caducado o ya fue usado. Pide que te envíen un nuevo código de invitación.', 'error')
+      addNotification('Este código no existe o ya fue usado. Pide que te envíen un nuevo código de invitación.', 'error')
       return;
-    };
+    }
+    
+    // Verificar si el usuario ya es miembro del grupo
+    const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
+    if (isAlreadyMember) {
+      addNotification(`Ya eres miembro del grupo "${group.name}"`, 'info')
+      selectedGroup.value = group
+      window.history.pushState({}, document.title, "/" + '' )
+      return
+    }
+    
+    // Validar expiración del código
+    if (group.inviteCodeCreatedAt) {
+      const createdAt = new Date(group.inviteCodeCreatedAt)
+      const now = new Date()
+      const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
+      
+      if (hoursDiff > (group.inviteCodeExpiresIn || 3)) {
+        addNotification('Este código ha caducado. Pide que te envíen un nuevo código de invitación.', 'error')
+        return
+      }
+    }
+    
+    // Validar límite de usos
+    if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 5)) {
+      addNotification('Este código ya fue usado el máximo de veces. Pide que te envíen un nuevo código de invitación.', 'error')
+      return
+    }
+    
+    // Mostrar confirmación para unirse al grupo
     const admin = group.members.find(m => m.role === 'admin');
     const acceptedInvitation = await autoGroupJoinConfirm({
       title: 'Has sido invitado a unirse a un grupo',
@@ -749,24 +780,7 @@ const getModalTitle = () => {
 }
 
 const getTransactionsSectionTitle = () => {
-  if (selectedGroup.value) {
-    const displayName = selectedGroup.value.displayName || selectedGroup.value.name
-    const groupName = displayName.trim()
-    
-    // Para el grupo personal "Mis finanzas", mostrar solo "Transacciones"
-    // Verificamos tanto por nombre como por descripción para mayor seguridad
-    const isPersonalGroup = (selectedGroup.value.name === 'Mis finanzas') || 
-                           selectedGroup.value.description?.includes('Grupo personal') ||
-                           (selectedGroup.value.inviteCode === null && selectedGroup.value.name.toLowerCase().includes('finanzas'))
-    
-    if (isPersonalGroup) {
-      return 'Transacciones'
-    }
-    
-    // Para otros grupos, mostrar el nombre que ve el usuario (que puede incluir #)
-    return `Transacciones del grupo ${groupName.charAt(0).toUpperCase() + groupName.slice(1).toLowerCase()}`
-  }
-  return 'Todas las transacciones'
+  return 'Transacciones'
 }
 const saveTransaction = async (transaction) => {
   try {
@@ -1109,8 +1123,8 @@ const handleCreateGroup = async (groupData) => {
       inviteCode: generateInviteCode(),
       inviteCodeCreatedAt: new Date().toISOString(),
       inviteCodeUsedCount: 0,
-      inviteCodeMaxUses: 10,
-      inviteCodeExpiresIn: 6,
+      inviteCodeMaxUses: 5,
+      inviteCodeExpiresIn: 3,
       members: [
         {
           id: currentUser.value.id,
@@ -1165,16 +1179,30 @@ const generateUniqueGroupName = (originalName) => {
 
 const handleJoinGroup = async (inviteCode) => {
   try {
+    console.log('🔍 Intentando unirse al grupo con código:', inviteCode)
+    console.log('👤 Usuario actual:', currentUser.value?.email, 'ID:', currentUser.value?.id)
+    
+    if (!currentUser.value?.id) {
+      console.error('❌ Usuario actual no tiene ID válido')
+      addNotification('Error: Usuario no válido', 'error')
+      return
+    }
+    
     const group = groups.value.find(g => g.inviteCode === inviteCode)
     
     if (!group) {
+      console.error('❌ Grupo no encontrado con código:', inviteCode)
       addNotification('Código de invitación inválido o expirado', 'error')
       return
     }
     
+    console.log('👥 Grupo encontrado:', group.name, 'ID:', group.id)
+    console.log('🧑‍🤝‍🧑 Miembros actuales:', group.members)
+    
     // Verificar si ya es miembro antes de hacer otras validaciones
     const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
     if (isAlreadyMember) {
+      console.log('⚠️ Usuario ya es miembro del grupo')
       addNotification('Ya eres miembro de este grupo', 'warning')
       return
     }
@@ -1184,13 +1212,21 @@ const handleJoinGroup = async (inviteCode) => {
       const now = new Date()
       const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
       
-      if (hoursDiff > (group.inviteCodeExpiresIn || 6)) {
+      console.log('⏰ Verificando expiración:', hoursDiff, 'horas desde creación')
+      
+      if (hoursDiff > (group.inviteCodeExpiresIn || 3)) {
+        console.error('❌ Código expirado por tiempo')
         addNotification('Este código ha caducado. Pide que te envíen un nuevo código de invitación.', 'error')
         return
       }
     }
     
-    if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 10)) {
+    const usedCount = group.inviteCodeUsedCount || 0
+    const maxUses = group.inviteCodeMaxUses || 5
+    console.log('📊 Usos:', usedCount, 'de', maxUses)
+    
+    if (usedCount >= maxUses) {
+      console.error('❌ Código expirado por límite de usos')
       addNotification('Este código ya fue usado el máximo de veces. Pide que te envíen un nuevo código de invitación.', 'error')
       return
     }
@@ -1202,19 +1238,42 @@ const handleJoinGroup = async (inviteCode) => {
     const newMember = {
       id: currentUser.value.id,
       username: currentUser.value.username || currentUser.value.email?.split('@')[0],
-      role: 'member',
-      displayName: displayName !== originalGroupName ? displayName : undefined // Solo guardar si es diferente
+      role: 'member'
     }
+    
+    // Solo agregar displayName si es diferente del original
+    if (displayName !== originalGroupName) {
+      newMember.displayName = displayName
+    }
+    
+    console.log('➕ Agregando nuevo miembro:', newMember)
     
     const updatedGroup = {
       ...group,
       members: [...group.members, newMember],
-      inviteCodeUsedCount: (group.inviteCodeUsedCount || 0) + 1
+      inviteCodeUsedCount: usedCount + 1
     }
     
-    await firestoreService.updateGroup(group.id, updatedGroup)
+    // Limpiar campos undefined antes de enviar a Firestore
+    const cleanedGroup = Object.fromEntries(
+      Object.entries(updatedGroup).filter(([_, value]) => value !== undefined)
+    )
     
-    const usesLeft = (group.inviteCodeMaxUses || 10) - updatedGroup.inviteCodeUsedCount
+    // Limpiar campos undefined en miembros también
+    if (cleanedGroup.members) {
+      cleanedGroup.members = cleanedGroup.members.map(member => 
+        Object.fromEntries(
+          Object.entries(member).filter(([_, value]) => value !== undefined)
+        )
+      )
+    }
+    
+    console.log('💾 Actualizando grupo en Firestore...')
+    console.log('🧹 Grupo limpio:', cleanedGroup)
+    await firestoreService.updateGroup(group.id, cleanedGroup)
+    console.log('✅ Grupo actualizado exitosamente')
+    
+    const usesLeft = maxUses - updatedGroup.inviteCodeUsedCount
     
     const joinMessage = displayName !== originalGroupName 
       ? `¡Te has unido al grupo "${displayName}" (nombre original: "${originalGroupName}")!`
@@ -1226,8 +1285,9 @@ const handleJoinGroup = async (inviteCode) => {
       addNotification(`${joinMessage} Este código ya no puede usarse más.`, 'success')
     }
   } catch (error) {
-    console.error('Error uniéndose al grupo:', error)
-    addNotification('Error uniéndose al grupo', 'error')
+    console.error('❌ Error completo uniéndose al grupo:', error)
+    console.error('Stack trace:', error.stack)
+    addNotification(`Error uniéndose al grupo: ${error.message || 'Error desconocido'}`, 'error')
   }
 }
 
@@ -1322,8 +1382,8 @@ const handleGenerateInviteCode = async (groupId, showNotification = true) => {
       inviteCode: generateInviteCode(),
       inviteCodeCreatedAt: new Date().toISOString(),
       inviteCodeUsedCount: 0,
-      inviteCodeMaxUses: 10,
-      inviteCodeExpiresIn: 6
+      inviteCodeMaxUses: 5,
+      inviteCodeExpiresIn: 3
     }
     
     await firestoreService.updateGroup(groupId, updatedGroup)
@@ -1347,8 +1407,8 @@ const handleGenerateNewCode = async (groupId) => {
       inviteCode: generateInviteCode(),
       inviteCodeCreatedAt: new Date().toISOString(),
       inviteCodeUsedCount: 0,
-      inviteCodeMaxUses: 10,
-      inviteCodeExpiresIn: 6
+      inviteCodeMaxUses: 5,
+      inviteCodeExpiresIn: 3
     }
     
     await firestoreService.updateGroup(groupId, updatedGroup)

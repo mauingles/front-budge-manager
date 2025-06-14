@@ -194,7 +194,7 @@ const shareOnWhatsApp = () => {
       const now = new Date()
       const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
       
-      if (hoursDiff > (group.inviteCodeExpiresIn || 6)) {
+      if (hoursDiff > (group.inviteCodeExpiresIn || 3)) {
         // Código expirado, generar uno nuevo
         emit('generate-invite-code', group.id)
         setTimeout(() => {
@@ -206,7 +206,7 @@ const shareOnWhatsApp = () => {
     }
     
     // Verificar límite de usos
-    if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 10)) {
+    if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 5)) {
       // Límite alcanzado, generar uno nuevo
       emit('generate-invite-code', group.id)
       setTimeout(() => {
@@ -235,13 +235,13 @@ const shareOnWhatsApp = () => {
 // Función para mostrar notificación sobre límites
 const showLimitNotification = () => {
   const group = props.modelValue
-  const usesLeft = (group.inviteCodeMaxUses || 10) - (group.inviteCodeUsedCount || 0)
+  const usesLeft = (group.inviteCodeMaxUses || 5) - (group.inviteCodeUsedCount || 0)
   
   // Calcular tiempo restante
   let timeLeft = ''
   if (group.inviteCodeCreatedAt) {
     const createdAt = new Date(group.inviteCodeCreatedAt)
-    const expiresAt = new Date(createdAt.getTime() + (group.inviteCodeExpiresIn || 6) * 60 * 60 * 1000)
+    const expiresAt = new Date(createdAt.getTime() + (group.inviteCodeExpiresIn || 3) * 60 * 60 * 1000)
     const now = new Date()
     const hoursLeft = Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60)))
     timeLeft = hoursLeft > 0 ? ` (${hoursLeft}h restantes)` : ''
@@ -256,9 +256,39 @@ const openWhatsApp = () => {
   
   const message = `Te invito a participar en la app https://budge-manager.netlify.app?groupCode=${group.inviteCode} de mi grupo "${group.name}"`
   const encodedMessage = encodeURIComponent(message)
-  const whatsappUrl = `https://wa.me/?text=${encodedMessage}`
   
-  window.open(whatsappUrl, '_blank')
+  // Detectar si es dispositivo móvil
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  
+  if (isMobile) {
+    // En móvil, intentar abrir la app nativa primero
+    const whatsappAppUrl = `whatsapp://send?text=${encodedMessage}`
+    const whatsappWebUrl = `https://wa.me/?text=${encodedMessage}`
+    
+    // Crear un elemento temporal para detectar si la app está instalada
+    const link = document.createElement('a')
+    link.href = whatsappAppUrl
+    
+    // Intentar abrir la app nativa
+    try {
+      window.location.href = whatsappAppUrl
+      
+      // Fallback: si no se abre la app en 2 segundos, abrir la versión web
+      setTimeout(() => {
+        // Solo abrir la versión web si la página sigue activa (la app no se abrió)
+        if (!document.hidden) {
+          window.open(whatsappWebUrl, '_blank')
+        }
+      }, 2000)
+    } catch (error) {
+      // Si falla, usar la versión web directamente
+      window.open(whatsappWebUrl, '_blank')
+    }
+  } else {
+    // En desktop, usar siempre WhatsApp Web
+    const whatsappUrl = `https://wa.me/?text=${encodedMessage}`
+    window.open(whatsappUrl, '_blank')
+  }
 }
 
 // Función para crear nuevo grupo

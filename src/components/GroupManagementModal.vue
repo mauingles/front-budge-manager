@@ -449,9 +449,14 @@ const isGroupCreator = (group) => {
 const canDeleteGroup = (group) => {
   if (!props.currentUser) return false
   
+  // NUNCA permitir eliminar el grupo "Mis finanzas" para usuarios regulares
+  if (group.name === 'Mis finanzas' && props.currentUser.role === 'user') {
+    return false
+  }
+  
   const currentUserRole = props.currentUser.role
   
-  // SuperAdmin puede eliminar cualquier grupo
+  // SuperAdmin puede eliminar cualquier grupo (incluido "Mis finanzas")
   if (currentUserRole === 'superadmin') {
     return true
   }
@@ -462,8 +467,11 @@ const canDeleteGroup = (group) => {
     return groupCreator && groupCreator.role === 'user'
   }
   
-  // Usuario regular solo puede eliminar grupos que creó
+  // Usuario regular solo puede eliminar grupos que creó, EXCEPTO "Mis finanzas"
   if (currentUserRole === 'user') {
+    if (group.name === 'Mis finanzas') {
+      return false
+    }
     return group.createdBy === props.currentUser.id
   }
   

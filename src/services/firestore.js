@@ -316,9 +316,28 @@ export const addGroup = async (groupData) => {
 export const updateGroup = async (groupId, groupData) => {
   try {
     console.log('🔄 Actualizando grupo:', groupId)
+    
+    // Limpiar campos undefined de forma recursiva
+    const cleanData = (obj) => {
+      if (Array.isArray(obj)) {
+        return obj.map(item => cleanData(item))
+      } else if (obj !== null && typeof obj === 'object') {
+        const cleaned = {}
+        for (const [key, value] of Object.entries(obj)) {
+          if (value !== undefined) {
+            cleaned[key] = cleanData(value)
+          }
+        }
+        return cleaned
+      }
+      return obj
+    }
+    
+    const cleanedData = cleanData(groupData)
+    
     const groupRef = doc(db, COLLECTIONS.GROUPS, groupId.toString())
     await updateDoc(groupRef, {
-      ...groupData,
+      ...cleanedData,
       updatedAt: serverTimestamp()
     })
     console.log('✅ Grupo actualizado exitosamente')
