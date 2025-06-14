@@ -1,13 +1,15 @@
 <template>
   <AppLayout>
-    <div v-if="isLoading" class="loading">Cargando...</div>
-    <div v-if="!isOnline && !isLoading" class="offline">Sin conexión</div>
     
-    <LoginForm v-if="!currentUser && !authLoading" 
+    <!-- Estados de carga y conexión -->
+    <div v-if="isLoading" class="loading">Cargando...</div>
+    <div v-else-if="!isOnline && !isLoading" class="offline">Sin conexión</div>
+    
+    <!-- Login form si no hay usuario autenticado -->
+    <LoginForm v-else-if="!currentUser && !authLoading" 
       @login="handleLogin" 
       @register="handleRegister"
       @google-login="handleGoogleLogin" />
-    
     
     <!-- App principal si está autenticado -->
     <div v-else-if="currentUser && !authLoading" class="main-app">
@@ -166,7 +168,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import AppLayout from './components/AppLayout.vue'
 import MonthlyBalance from './components/MonthlyBalance.vue'
 import BaseCard from './components/BaseCard.vue'
@@ -182,6 +184,7 @@ import GroupManagementModal from './components/GroupManagementModal.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import apiService from './services/api.js'
+import * as firestoreService from './services/firestore.js'
 import { useAuth } from '@/composables/useAuth.js'
 import { useNotifications } from '@/composables/useNotifications.js'
 import { useConfirm } from '@/composables/useConfirm.js'
@@ -195,6 +198,9 @@ const { confirmState: autoGroupJoin, confirm: autoGroupJoinConfirm, handleConfir
 const isLoading = ref(true)
 const isOnline = ref(true)
 const errorMessage = ref('')
+// isFirestoreEnabled variable removed - always using Firestore now
+const hasMigrated = ref(false)
+const groupCodeHandled = ref(false)
 
 // Estado de autenticación
 const currentUser = ref(null)
@@ -293,196 +299,243 @@ const hasGroupAccess = (groupId) => {
 }
 
 const userGroups = computed(() => {
-  if (!currentUser.value) return []
+  // console.log('🔍 Calculando userGroups para:', currentUser.value?.email, 'Role:', currentUser.value?.role)
+  // console.log('📊 Total grupos disponibles:', groups.value.length)
+  
+  if (!currentUser.value) {
+    console.log('❌ No hay currentUser - retornando array vacío')
+    return []
+  }
   
   const isAdmin = currentUser.value.role === 'admin'
   const isSuperAdmin = currentUser.value.role === 'superadmin'
   
-  console.log('🔍 USER GROUPS DEBUG:')
-  console.log('- Usuario actual:', currentUser.value.email, 'Role:', currentUser.value.role, 'ID:', currentUser.value.id, 'Tipo ID:', typeof currentUser.value.id)
-  console.log('- Total grupos en sistema:', groups.value.length)
-  console.log('- Todos los grupos:', groups.value.map(g => ({ name: g.name, id: g.id, members: g.members.map(m => ({ id: m.id, username: m.username })) })))
-  
   // Admin y SuperAdmin pueden ver todos los grupos
   if (isAdmin || isSuperAdmin) {
-    console.log('👑 Admin/SuperAdmin - todos los grupos disponibles')
+    console.log('👑 Usuario admin/superadmin - mostrando todos los grupos')
     return groups.value.filter(group => {
       const isHidden = group.hiddenFor && group.hiddenFor.includes(currentUser.value.id)
       return !isHidden
+    }).map(group => {
+      // Para admins, mostrar el nombre original
+      return {
+        ...group,
+        displayName: group.name
+      }
     })
   }
   
+  // console.log('👤 Usuario regular - filtrando grupos por membresía')
+  // console.log('🆔 Usuario ID:', currentUser.value.id)
+  // console.log('📧 Usuario email:', currentUser.value.email)
+  // console.log('👤 Username:', currentUser.value.username)
+  
   // Usuarios regulares solo ven grupos donde son miembros
-  console.log('👤 Usuario regular - solo grupos donde es miembro')
   const userFilteredGroups = groups.value.filter(group => {
-    console.log(`- Grupo "${group.name}":`)
-    console.log('  - members:', group.members)
-    console.log('  - currentUser.id:', currentUser.value?.id)
+    console.log(`🔍 Evaluando grupo "${group.name}":`)
+    console.log('   📋 Miembros:', group.members)
+    console.log('   👤 Creado por:', group.createdBy)
+    
+    // Manejar tanto formato de miembros como strings o como objetos
     const isMember = group.members.some(member => {
-      console.log('    - member.id:', member.id, 'tipo:', typeof member.id)
-      console.log('    - currentUser.id:', currentUser.value?.id, 'tipo:', typeof currentUser.value?.id)
-      return member.id === currentUser.value?.id
+      if (typeof member === 'string') {
+        // Si el miembro es un string, comparar con el username
+        const match = member === currentUser.value?.username || member === currentUser.value?.email?.split('@')[0]
+        console.log(`   ✅ String member "${member}" matches: ${match}`)
+        return match
+      } else {
+        // Si el miembro es un objeto, usar el ID
+        const match = member.id === currentUser.value?.id
+        console.log(`   ✅ Object member ID ${member.id} matches current user ID ${currentUser.value?.id}: ${match}`)
+        return match
+      }
     })
+    
     const isHidden = group.hiddenFor && group.hiddenFor.includes(currentUser.value.id)
-    console.log(`  - Es miembro: ${isMember}`)
-    console.log(`  - Está oculto: ${isHidden}`)
-    return isMember && !isHidden
+    const shouldShow = isMember && !isHidden
+    
+    console.log(`   🏆 Resultado - Es miembro: ${isMember}, Está oculto: ${isHidden}, Mostrar: ${shouldShow}`)
+    
+    return shouldShow
+  }).map(group => {
+    // Buscar si el usuario tiene un displayName personalizado para este grupo
+    const userMember = group.members.find(member => {
+      if (typeof member === 'string') {
+        return member === currentUser.value?.username || member === currentUser.value?.email?.split('@')[0]
+      } else {
+        return member.id === currentUser.value.id
+      }
+    })
+    const displayName = (typeof userMember === 'object' ? userMember?.displayName : null) || group.name
+    
+    return {
+      ...group,
+      displayName: displayName
+    }
   })
-  console.log('- Grupos visibles para usuario:', userFilteredGroups.length)
+  
+  console.log(`📈 Total grupos filtrados para mostrar: ${userFilteredGroups.length}`)
+  console.log('📝 Grupos a mostrar:', userFilteredGroups.map(g => g.name))
+  
   return userFilteredGroups
 })
 
-// Funciones API
-const loadData = async () => {
+// Configuración inicial de Firestore
+const initializeFirestore = async () => {
   try {
-    isLoading.value = true
-    errorMessage.value = ''
-    const data = await apiService.getAllData()
+    console.log('🔥 Inicializando Firestore...')
     
-    users.value = data.users || []
-    transactions.value = data.transactions || []
-    groups.value = data.groups || []
-    MASTER_PASSWORD.value = data.settings?.masterPassword || 'admin123'
-    selectedMonth.value = getCurrentMonth()
-    selectedGroup.value = null
+    // Configurar listeners en tiempo real
+    setupRealtimeListeners()
     
-    if (firebaseUser.value) {
-      let user = users.value.find(u => u.email === firebaseUser.value.email)
-      if (!user) {
-        // Crear nuevo usuario si no existe
-        user = {
-          id: Date.now(),
-          username: firebaseUser.value.displayName || firebaseUser.value.email.split('@')[0],
-          email: firebaseUser.value.email,
-          photoURL: firebaseUser.value.photoURL,
-          uid: firebaseUser.value.uid,
-          role: 'user',
-          isGoogleUser: true,
-          password: null
-        }
-        users.value.push(user)
-        
-        // Crear grupo por defecto "Mis finanzas" para el nuevo usuario y seleccionarlo
-        const defaultGroup = createDefaultGroup(user)
-        selectedGroup.value = defaultGroup
+    console.log('✅ Firestore inicializado correctamente')
+    
+  } catch (error) {
+    console.error('❌ Error inicializando Firestore:', error)
+    addNotification('Error conectando a Firestore', 'error')
+    throw error // Propagar el error para manejo en onMounted
+  }
+}
+
+// Configurar todos los listeners en tiempo real
+const setupRealtimeListeners = () => {
+  console.log('👂 Configurando listeners en tiempo real...')
+  
+  // Listener para usuarios
+  firestoreService.listenToUsers((updatedUsers) => {
+    console.log('🔄 Usuarios actualizados desde Firestore:', updatedUsers.length)
+    console.log('👥 Usuarios:', updatedUsers.map(u => u.email))
+    users.value = updatedUsers
+    
+    // Actualizar usuario actual si existe y está autenticado
+    if (currentUser.value && firebaseUser.value) {
+      const updatedCurrentUser = users.value.find(u => u.email === firebaseUser.value.email)
+      if (updatedCurrentUser) {
+        currentUser.value = updatedCurrentUser
+      }
+    } else if (firebaseUser.value && !currentUser.value) {
+      // Si hay usuario de Firebase pero no currentUser, intentar autenticación
+      handleUserAuthentication()
+    }
+  })
+  
+  // Listener para transacciones
+  firestoreService.listenToTransactions((updatedTransactions) => {
+    console.log('🔄 Transacciones actualizadas desde Firestore:', updatedTransactions.length)
+    transactions.value = updatedTransactions
+  })
+  
+  // Listener para grupos
+  firestoreService.listenToGroups((updatedGroups) => {
+    console.log('🔄 Grupos actualizados desde Firestore:', updatedGroups.length)
+    console.log('🏢 Grupos:', updatedGroups.map(g => ({ name: g.name, createdBy: g.createdBy, members: g.members?.map(m => m.username) })))
+    groups.value = updatedGroups
+    
+    // Actualizar grupo seleccionado si existe
+    if (selectedGroup.value) {
+      const updatedSelectedGroup = groups.value.find(g => g.id === selectedGroup.value.id)
+      if (updatedSelectedGroup) {
+        selectedGroup.value = updatedSelectedGroup
       } else {
-        // Usuario existente: sincronizar datos de Firebase con los datos del servidor
-        user.photoURL = firebaseUser.value.photoURL
-        user.uid = firebaseUser.value.uid
-        if (firebaseUser.value.displayName) {
-          user.username = firebaseUser.value.displayName
-        }
-        // El rol se mantiene desde el servidor (no se sobrescribe)
+        selectedGroup.value = null
       }
-      currentUser.value = user
-      
-      // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
-      // Para usuarios regulares, siempre debe haber un grupo seleccionado
-      if (!selectedGroup.value || (user.role === 'user' && !selectedGroup.value)) {
-        const userDefaultGroup = groups.value.find(g => 
-          g.createdBy === user.id && g.name === 'Mis finanzas'
-        )
-        if (userDefaultGroup) {
-          selectedGroup.value = userDefaultGroup
-          console.log(`✅ Grupo "Mis finanzas" seleccionado automáticamente para ${user.email}`)
-        }
-      }
-      
-      handleGroupCode();
-    } else {
-      currentUser.value = null
     }
-    
-    isOnline.value = true
-  } catch (error) {
-    console.error('Error loading data:', error)
-    isOnline.value = false
-    errorMessage.value = 'No se pudo conectar al servidor'
-  } finally {
-    isLoading.value = false
-  }
+  })
+  
+  // Listener para configuraciones
+  firestoreService.listenToSettings((updatedSettings) => {
+    console.log('🔄 Configuraciones actualizadas desde Firestore')
+    MASTER_PASSWORD.value = updatedSettings.masterPassword || 'admin123'
+    // No actualizar selectedMonth automáticamente desde Firestore para preservar la experiencia del usuario
+  })
 }
 
-const saveData = async () => {
-  try {
-    const data = {
-      users: users.value || [],
-      transactions: transactions.value || [],
-      groups: groups.value || [],
-      settings: {
-        masterPassword: MASTER_PASSWORD.value || 'admin123',
-        selectedMonth: selectedMonth.value || getCurrentMonth(),
-        selectedGroup: selectedGroup.value || null
-      }
-      // currentUser removido - Firebase Auth maneja esto
+
+// Manejo de autenticación de usuario
+const handleUserAuthentication = async () => {
+  console.log('🔐 Autenticando usuario:', firebaseUser.value?.email)
+  console.log('🆔 Firebase UID:', firebaseUser.value?.uid)
+  console.log('📊 Usuarios cargados en memory:', users.value.length)
+  
+  if (firebaseUser.value) {
+    // Si no hay usuarios cargados aún, esperar un poco
+    if (users.value.length === 0) {
+      console.log('⏳ No hay usuarios cargados, esperando 3 segundos...')
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      console.log('📊 Usuarios después de esperar:', users.value.length)
     }
     
-    await apiService.saveAllData(data)
-    isOnline.value = true
-    errorMessage.value = ''
-  } catch (error) {
-    console.error('Error saving data:', error)
-    isOnline.value = false
-    errorMessage.value = 'Error al guardar datos'
-  }
-}
-
-// Watcher para sincronizar Firebase user con currentUser
-watch(firebaseUser, async (newFirebaseUser) => {
-  if (newFirebaseUser) {
-    // Usuario de Firebase autenticado - recargar datos del servidor para obtener roles actualizados
-    console.log('🔄 Firebase user autenticado, recargando datos del servidor...')
-    await loadData()
+    // Buscar por email Y por UID para mayor seguridad
+    let user = users.value.find(u => 
+      u.email === firebaseUser.value.email || u.uid === firebaseUser.value.uid
+    )
+    console.log('👤 Usuario encontrado en DB:', user ? `Sí (ID: ${user.id})` : 'No')
     
-    // Después de recargar, buscar el usuario actualizado
-    const existingUser = users.value.find(u => u.email === newFirebaseUser.email)
-    
-    if (existingUser) {
-      // Usuario local existente: sincronizar datos de Firebase preservando el rol del servidor
-      existingUser.photoURL = newFirebaseUser.photoURL
-      existingUser.uid = newFirebaseUser.uid
-      if (newFirebaseUser.displayName) {
-        existingUser.username = newFirebaseUser.displayName
-      }
-      currentUser.value = existingUser
+    if (!user) {
+      // Crear nuevo usuario si no existe - USAR UID como ID base
+      const userId = firebaseUser.value.uid.slice(-10) // Usar los últimos 10 caracteres del UID
+      const numericId = parseInt(userId, 36) || Date.now() // Convertir a número o usar timestamp como fallback
       
-      // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
-      // Para usuarios regulares, siempre debe haber un grupo seleccionado
-      if (!selectedGroup.value || (existingUser.role === 'user' && !selectedGroup.value)) {
-        const userDefaultGroup = groups.value.find(g => 
-          g.createdBy === existingUser.id && g.name === 'Mis finanzas'
-        )
-        if (userDefaultGroup) {
-          selectedGroup.value = userDefaultGroup
-          console.log(`✅ Grupo "Mis finanzas" seleccionado automáticamente para ${existingUser.email}`)
-        }
-      }
-      
-      console.log('✅ Usuario Google existente sincronizado:', existingUser.email, 'Role:', existingUser.role)
-    } else {
-      // Nuevo usuario de Firebase (no debería pasar después de loadData, pero por seguridad)
-      const newUser = {
-        id: Date.now(),
-        username: newFirebaseUser.displayName || newFirebaseUser.email.split('@')[0],
-        email: newFirebaseUser.email,
-        photoURL: newFirebaseUser.photoURL,
-        uid: newFirebaseUser.uid,
+      user = {
+        id: numericId,
+        username: firebaseUser.value.displayName || firebaseUser.value.email.split('@')[0],
+        email: firebaseUser.value.email,
+        photoURL: firebaseUser.value.photoURL,
+        uid: firebaseUser.value.uid,
         role: 'user',
         isGoogleUser: true,
         password: null
       }
       
-      users.value.push(newUser)
-      currentUser.value = newUser
+      console.log('🆕 Creando nuevo usuario con ID:', user.id)
+      await firestoreService.addUser(user)
       
       // Crear grupo por defecto "Mis finanzas" para el nuevo usuario y seleccionarlo
-      const defaultGroup = createDefaultGroup(newUser)
+      const defaultGroup = await createDefaultGroup(user)
       selectedGroup.value = defaultGroup
-      
-      console.log('✅ Nuevo usuario Google creado:', newUser.email, 'Role:', newUser.role)
+    } else {
+      // Usuario existente: sincronizar datos de Firebase con los datos del servidor
+      console.log('🔄 Actualizando datos de usuario existente')
+      user.photoURL = firebaseUser.value.photoURL
+      user.uid = firebaseUser.value.uid
+      if (firebaseUser.value.displayName) {
+        user.username = firebaseUser.value.displayName
+      }
+    }
+    
+    currentUser.value = user
+    
+    // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
+    if (!selectedGroup.value || (user.role === 'user' && !selectedGroup.value)) {
+      const userDefaultGroup = groups.value.find(g => 
+        g.createdBy === user.id && g.name === 'Mis finanzas'
+      )
+      if (userDefaultGroup) {
+        console.log('📌 Seleccionando grupo existente "Mis finanzas" para usuario existente')
+        selectedGroup.value = userDefaultGroup
+      } else {
+        console.log('⚠️ Usuario existente sin grupo "Mis finanzas" - esto no debería pasar')
+        // No crear el grupo aquí para usuarios existentes
+        // Dejar que se maneje en el watcher de grupos cuando se carguen
+      }
+    }
+    
+    await handleGroupCode()
+  } else {
+    currentUser.value = null
+  }
+}
+
+
+// Watcher para sincronizar Firebase user con currentUser
+watch(firebaseUser, async (newFirebaseUser) => {
+  if (newFirebaseUser) {
+    // Usuario autenticado - manejar después de que Firestore esté inicializado
+    if (!isLoading.value) {
+      await handleUserAuthentication()
     }
   } else if (!newFirebaseUser && currentUser.value?.isGoogleUser) {
-    // Firebase user logged out y current user es de Google
+    // Firebase user logged out
     currentUser.value = null
   }
 })
@@ -509,26 +562,114 @@ const refreshUserData = async () => {
   }
 }
 
-// Watchers para auto-guardado
-watch([users, transactions, groups, MASTER_PASSWORD, selectedMonth, selectedGroup, currentUser], () => {
+// Watcher para configuraciones en Firestore
+watch([MASTER_PASSWORD], async () => {
   if (!isLoading.value) {
-    saveData()
+    try {
+      await firestoreService.updateSettings({
+        masterPassword: MASTER_PASSWORD.value
+      })
+    } catch (error) {
+      console.error('Error actualizando configuraciones en Firestore:', error)
+    }
   }
 }, { deep: true })
 
-// Cargar datos al iniciar
-onMounted(async () => {
-  await loadData();
-  if(currentUser.value) {
-    await handleGroupCode();
+// Función temporal para limpiar grupos duplicados "Mis finanzas"
+const cleanupDuplicateGroups = async () => {
+  if (!currentUser.value || groups.value.length === 0) return
+  
+  // Encontrar todos los grupos "Mis finanzas" del usuario actual
+  const misFinanzasGroups = groups.value.filter(g => 
+    g.name === 'Mis finanzas' && 
+    g.members.some(member => {
+      if (typeof member === 'string') {
+        return member === currentUser.value.username || member === currentUser.value.email?.split('@')[0]
+      } else {
+        return member.id === currentUser.value.id
+      }
+    })
+  )
+  
+  console.log(`🧹 Encontrados ${misFinanzasGroups.length} grupos "Mis finanzas" para este usuario`)
+  
+  if (misFinanzasGroups.length > 1) {
+    console.log('🗑️ Eliminando grupos duplicados...')
+    // Mantener solo el más reciente (mayor ID)
+    const sortedGroups = misFinanzasGroups.sort((a, b) => b.id - a.id)
+    const keepGroup = sortedGroups[0]
+    const toDelete = sortedGroups.slice(1)
+    
+    for (const group of toDelete) {
+      console.log(`🗑️ Eliminando grupo duplicado: ${group.id}`)
+      await firestoreService.deleteGroup(group.id)
+    }
+    
+    // Seleccionar el grupo que se mantiene
+    selectedGroup.value = keepGroup
+    addNotification('Grupos duplicados limpiados', 'success', 2000)
   }
+}
+
+// Watcher para seleccionar grupo por defecto cuando se cargan los grupos
+watch([groups, currentUser], async () => {
+  if (currentUser.value && groups.value.length > 0) {
+    // Limpiar duplicados primero
+    await cleanupDuplicateGroups()
+    
+    // Luego seleccionar el grupo por defecto si no hay ninguno seleccionado
+    if (!selectedGroup.value) {
+      console.log('👀 Grupos cargados, verificando grupo por defecto para usuario existente')
+      const userDefaultGroup = groups.value.find(g => 
+        g.createdBy === currentUser.value.id && g.name === 'Mis finanzas'
+      )
+      if (userDefaultGroup) {
+        console.log('✅ Seleccionando grupo "Mis finanzas" existente')
+        selectedGroup.value = userDefaultGroup
+      }
+    }
+  }
+}, { immediate: true })
+
+// Inicializar aplicación al montar
+onMounted(async () => {
+  try {
+    isLoading.value = true
+    
+    // Siempre usar Firestore, tanto en localhost como en producción
+    console.log('🔥 Inicializando Firestore para todos los entornos')
+    await initializeFirestore()
+    
+    // Después de inicializar, manejar autenticación si hay usuario de Firebase
+    if (firebaseUser.value) {
+      await handleUserAuthentication()
+    }
+    
+    if (currentUser.value) {
+      await handleGroupCode()
+    }
+  } catch (error) {
+    console.error('Error inicializando aplicación:', error)
+    addNotification('Error inicializando la aplicación', 'error')
+  } finally {
+    isLoading.value = false
+  }
+})
+
+// Limpiar listeners al desmontar
+onUnmounted(() => {
+  firestoreService.unsubscribeAll()
 })
 
 // Métodos
 const handleGroupCode = async () => {
+  // Evitar ejecutar múltiples veces
+  if (groupCodeHandled.value) return
+  
   const url = new URL(window.location)
   const groupCode = url.searchParams.get('groupCode')
   if(groupCode) {
+    groupCodeHandled.value = true
     const group = groups.value.find(g => g.inviteCode === groupCode)
     if(!group) {
       addNotification('Este código ha caducado o ya fue usado. Pide que te envíen un nuevo código de invitación.', 'error')
@@ -609,62 +750,77 @@ const getModalTitle = () => {
 
 const getTransactionsSectionTitle = () => {
   if (selectedGroup.value) {
-    return `Transacciones del grupo ${selectedGroup.value.name.charAt(0).toUpperCase() + selectedGroup.value.name.slice(1).toLowerCase()}`
+    const displayName = selectedGroup.value.displayName || selectedGroup.value.name
+    const groupName = displayName.trim()
+    
+    // Para el grupo personal "Mis finanzas", mostrar solo "Transacciones"
+    // Verificamos tanto por nombre como por descripción para mayor seguridad
+    const isPersonalGroup = (selectedGroup.value.name === 'Mis finanzas') || 
+                           selectedGroup.value.description?.includes('Grupo personal') ||
+                           (selectedGroup.value.inviteCode === null && selectedGroup.value.name.toLowerCase().includes('finanzas'))
+    
+    if (isPersonalGroup) {
+      return 'Transacciones'
+    }
+    
+    // Para otros grupos, mostrar el nombre que ve el usuario (que puede incluir #)
+    return `Transacciones del grupo ${groupName.charAt(0).toUpperCase() + groupName.slice(1).toLowerCase()}`
   }
   return 'Todas las transacciones'
 }
-const saveTransaction = (transaction) => {
-  // Agregar datos de usuario y grupo a la transacción
-  const transactionData = {
-    ...transaction,
-    groupId: transaction.groupId || null, // Usar el grupo del formulario
-    userId: currentUser.value.id // IMPORTANTE: Asignar el ID del usuario actual
-  }
-  
-  if (editing.value && editingTransaction.value) {
-    // Editar transacción existente - verificar permisos
-    const existingTransaction = transactions.value.find(t => t.id === editingTransaction.value.id)
-    
-    // Verificar que solo el creador pueda editar
-    if (existingTransaction.userId !== currentUser.value.id) {
-      addNotification('Solo el creador puede editar esta transacción', 'error')
-      return
+const saveTransaction = async (transaction) => {
+  try {
+    // Agregar datos de usuario y grupo a la transacción
+    const transactionData = {
+      ...transaction,
+      groupId: transaction.groupId || null,
+      userId: currentUser.value.id,
+      createdAt: new Date().toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     }
     
-    const index = transactions.value.findIndex(t => t.id === editingTransaction.value.id)
-    if (index !== -1) {
-      transactions.value[index] = {
+    if (editing.value && editingTransaction.value) {
+      // Editar transacción existente
+      const existingTransaction = transactions.value.find(t => t.id === editingTransaction.value.id)
+      
+      if (existingTransaction.userId !== currentUser.value.id) {
+        addNotification('Solo el creador puede editar esta transacción', 'error')
+        return
+      }
+      
+      const updatedTransaction = {
         ...transactionData,
         id: editingTransaction.value.id,
-        userId: existingTransaction.userId, // Mantener el usuario original
-        createdAt: new Date().toLocaleDateString('es-ES', {
-          day: '2-digit',
-          month: '2-digit', 
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
+        userId: existingTransaction.userId
       }
+      
+      await firestoreService.updateTransaction(editingTransaction.value.id, updatedTransaction)
+      
+      const typeText = transactionData.type === 'income' ? 'ingreso' : 'gasto'
+      addNotification(`${typeText.charAt(0).toUpperCase() + typeText.slice(1)} editado correctamente`, 'success', 2000)
+    } else {
+      // Agregar nueva transacción
+      const newTransaction = {
+        ...transactionData,
+        id: Date.now()
+      }
+      
+      await firestoreService.addTransaction(newTransaction)
+      
+      const typeText = transactionData.type === 'income' ? 'ingreso' : 'gasto'
+      addNotification(`${typeText.charAt(0).toUpperCase() + typeText.slice(1)} creado correctamente`, 'success', 2000)
     }
-  } else {
-    // Agregar nueva transacción
-    transactions.value.push({
-      ...transactionData,
-      id: Date.now()
-    })
+    
+    closeModal()
+  } catch (error) {
+    console.error('Error guardando transacción:', error)
+    addNotification('Error guardando la transacción', 'error')
   }
-  
-  closeModal()
-  
-  // Mostrar notificación específica
-  if (editing.value) {
-    const typeText = transactionData.type === 'income' ? 'ingreso' : 'gasto'
-    addNotification(`${typeText.charAt(0).toUpperCase() + typeText.slice(1)} editado correctamente`, 'success', 2000)
-  } else {
-    const typeText = transactionData.type === 'income' ? 'ingreso' : 'gasto'
-    addNotification(`${typeText.charAt(0).toUpperCase() + typeText.slice(1)} creado correctamente`, 'success', 2000)
-  }
-  
 }
 
 const editTransaction = (transaction) => {
@@ -681,29 +837,33 @@ const editTransaction = (transaction) => {
 }
 
 const deleteTransaction = async (transactionId) => {
-  // Verificar que solo el creador pueda eliminar
-  const transaction = transactions.value.find(t => t.id === transactionId)
-  if (!transaction) {
-    addNotification('Transacción no encontrada', 'error')
-    return
-  }
-  
-  if (transaction.userId !== currentUser.value.id) {
-    addNotification('Solo el creador puede eliminar esta transacción', 'error')
-    return
-  }
-  
-  const confirmed = await confirm({
-    title: '¿Eliminar esta transacción?',
-    message: ' ',
-    confirmText: 'Eliminar',
-    cancelText: 'Cancelar',
-    type: 'danger'
-  })
-  
-  if (confirmed) {
-    transactions.value = transactions.value.filter(t => t.id !== transactionId)
-    addNotification('Transacción eliminada correctamente', 'success', 2000)
+  try {
+    const transaction = transactions.value.find(t => t.id === transactionId)
+    if (!transaction) {
+      addNotification('Transacción no encontrada', 'error')
+      return
+    }
+    
+    if (transaction.userId !== currentUser.value.id) {
+      addNotification('Solo el creador puede eliminar esta transacción', 'error')
+      return
+    }
+    
+    const confirmed = await confirm({
+      title: '¿Eliminar esta transacción?',
+      message: ' ',
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    })
+    
+    if (confirmed) {
+      await firestoreService.deleteTransaction(transactionId)
+      addNotification('Transacción eliminada correctamente', 'success', 2000)
+    }
+  } catch (error) {
+    console.error('Error eliminando transacción:', error)
+    addNotification('Error eliminando la transacción', 'error')
   }
 }
 
@@ -743,132 +903,178 @@ const handleLogout = async () => {
   }
 }
 
-const updateMasterPassword = (newPassword) => {
-  MASTER_PASSWORD.value = newPassword
-  
-}
-
-const handlePasswordChange = (passwordData) => {
-  // Verificar contraseña actual
-  if (currentUser.value.password !== passwordData.currentPassword) {
-    addNotification('La contraseña actual es incorrecta', 'error')
-    return
-  }
-  
-  // Actualizar contraseña del usuario
-  const userIndex = users.value.findIndex(u => u.id === currentUser.value.id)
-  if (userIndex !== -1) {
-    users.value[userIndex].password = passwordData.newPassword
-    currentUser.value.password = passwordData.newPassword
+const updateMasterPassword = async (newPassword) => {
+  try {
+    MASTER_PASSWORD.value = newPassword
     
+    await firestoreService.updateSettings({
+      masterPassword: newPassword
+    })
+    
+    addNotification('Contraseña maestra actualizada', 'success')
+  } catch (error) {
+    console.error('Error actualizando contraseña maestra:', error)
+    addNotification('Error actualizando la contraseña maestra', 'error')
   }
 }
 
-const handleUsernameChange = (newUsername) => {
-  // Actualizar nombre de usuario del usuario actual
-  const userIndex = users.value.findIndex(u => u.id === currentUser.value.id)
-  if (userIndex !== -1) {
-    users.value[userIndex].username = newUsername
+const handlePasswordChange = async (passwordData) => {
+  try {
+    if (currentUser.value.password !== passwordData.currentPassword) {
+      addNotification('La contraseña actual es incorrecta', 'error')
+      return
+    }
+    
+    await firestoreService.updateUser(currentUser.value.id, {
+      ...currentUser.value,
+      password: passwordData.newPassword
+    })
+    
+    currentUser.value.password = passwordData.newPassword
+    addNotification('Contraseña actualizada correctamente', 'success')
+  } catch (error) {
+    console.error('Error actualizando contraseña:', error)
+    addNotification('Error actualizando la contraseña', 'error')
+  }
+}
+
+const handleUsernameChange = async (newUsername) => {
+  try {
+    // Actualizar usuario en Firestore
+    await firestoreService.updateUser(currentUser.value.id, {
+      ...currentUser.value,
+      username: newUsername
+    })
+    
     currentUser.value.username = newUsername
     
-    // Actualizar también en todas las transacciones del usuario
-    transactions.value.forEach(transaction => {
-      if (transaction.userId === currentUser.value.id || transaction.user === currentUser.value.username) {
-        transaction.user = newUsername
-      }
-    })
+    // Actualizar transacciones del usuario
+    const userTransactions = transactions.value.filter(t => 
+      t.userId === currentUser.value.id || t.user === currentUser.value.username
+    )
     
-    // Actualizar en todos los grupos donde sea miembro
-    groups.value.forEach(group => {
-      const memberIndex = group.members.findIndex(m => m.id === currentUser.value.id)
-      if (memberIndex !== -1) {
-        group.members[memberIndex].username = newUsername
-      }
-    })
+    for (const transaction of userTransactions) {
+      const updatedTransaction = { ...transaction, user: newUsername }
+      await firestoreService.updateTransaction(transaction.id, updatedTransaction)
+    }
+    
+    // Actualizar grupos donde sea miembro
+    const userGroups = groups.value.filter(group => 
+      group.members.some(m => m.id === currentUser.value.id)
+    )
+    
+    for (const group of userGroups) {
+      const updatedMembers = group.members.map(member => 
+        member.id === currentUser.value.id 
+          ? { ...member, username: newUsername }
+          : member
+      )
+      
+      await firestoreService.updateGroup(group.id, {
+        ...group,
+        members: updatedMembers
+      })
+    }
     
     addNotification('Nombre de usuario actualizado correctamente', 'success')
+  } catch (error) {
+    console.error('Error actualizando nombre de usuario:', error)
+    addNotification('Error actualizando el nombre de usuario', 'error')
+  }
+}
+
+const handleUserPasswordReset = async (userId) => {
+  try {
+    const userToReset = users.value.find(u => u.id === userId)
+    if (!userToReset) {
+      addNotification('Usuario no encontrado', 'error')
+      return
+    }
     
-  }
-}
-
-const handleUserPasswordReset = (userId) => {
-  // Encontrar el usuario
-  const userToReset = users.value.find(u => u.id === userId)
-  if (!userToReset) {
-    addNotification('Usuario no encontrado', 'error')
-    return
-  }
-  
-  // Verificar permisos de reseteo
-  const currentUserRole = currentUser.value.role
-  const targetUserRole = userToReset.role
-  
-  let canReset = false
-  
-  if (currentUserRole === 'superadmin') {
-    // SuperAdmin puede resetear admin y user
-    canReset = targetUserRole === 'admin' || targetUserRole === 'user'
-  } else if (currentUserRole === 'admin') {
-    // Admin solo puede resetear user
-    canReset = targetUserRole === 'user'
-  }
-  
-  if (!canReset) {
-    addNotification('No tienes permisos para resetear la contraseña de este usuario', 'error')
-    return
-  }
-  
-  // Resetear contraseña a "123" por defecto
-  const userIndex = users.value.findIndex(u => u.id === userId)
-  if (userIndex !== -1) {
-    users.value[userIndex].password = '123'
+    const currentUserRole = currentUser.value.role
+    const targetUserRole = userToReset.role
+    
+    let canReset = false
+    
+    if (currentUserRole === 'superadmin') {
+      canReset = targetUserRole === 'admin' || targetUserRole === 'user'
+    } else if (currentUserRole === 'admin') {
+      canReset = targetUserRole === 'user'
+    }
+    
+    if (!canReset) {
+      addNotification('No tienes permisos para resetear la contraseña de este usuario', 'error')
+      return
+    }
+    
+    await firestoreService.updateUser(userId, {
+      ...userToReset,
+      password: '123'
+    })
+    
     addNotification(`Contraseña reseteada para ${userToReset.username}. Nueva contraseña: 123`, 'success')
+  } catch (error) {
+    console.error('Error reseteando contraseña:', error)
+    addNotification('Error reseteando la contraseña', 'error')
   }
 }
 
-const handleDeleteUser = (userId) => {
-  // Encontrar el usuario a eliminar
-  const userToDelete = users.value.find(u => u.id === userId)
-  if (!userToDelete) return
-  
-  // No permitir eliminar al usuario actual
-  if (userId === currentUser.value.id) {
-    addNotification('No puedes eliminar tu propia cuenta', 'error')
-    return
+const handleDeleteUser = async (userId) => {
+  try {
+    const userToDelete = users.value.find(u => u.id === userId)
+    if (!userToDelete) return
+    
+    if (userId === currentUser.value.id) {
+      addNotification('No puedes eliminar tu propia cuenta', 'error')
+      return
+    }
+    
+    const currentUserRole = currentUser.value.role
+    const targetUserRole = userToDelete.role
+    
+    let canDelete = false
+    
+    if (currentUserRole === 'superadmin') {
+      canDelete = targetUserRole === 'admin' || targetUserRole === 'user'
+    } else if (currentUserRole === 'admin') {
+      canDelete = targetUserRole === 'user'
+    }
+    
+    if (!canDelete) {
+      addNotification('No tienes permisos para eliminar este usuario', 'error')
+      return
+    }
+    
+    // Eliminar usuario
+    await firestoreService.deleteUser(userId)
+    
+    // Actualizar grupos removiendo al usuario
+    const userGroups = groups.value.filter(group => 
+      group.members.some(member => member.id === userId)
+    )
+    
+    for (const group of userGroups) {
+      const updatedMembers = group.members.filter(member => member.id !== userId)
+      await firestoreService.updateGroup(group.id, {
+        ...group,
+        members: updatedMembers
+      })
+    }
+    
+    // Eliminar transacciones privadas del usuario
+    const userPrivateTransactions = transactions.value.filter(t => 
+      t.userId === userId && !t.groupId
+    )
+    
+    for (const transaction of userPrivateTransactions) {
+      await firestoreService.deleteTransaction(transaction.id)
+    }
+    
+    addNotification(`Usuario ${userToDelete.username} eliminado correctamente`, 'success')
+  } catch (error) {
+    console.error('Error eliminando usuario:', error)
+    addNotification('Error eliminando el usuario', 'error')
   }
-  
-  // Verificar permisos de eliminación
-  const currentUserRole = currentUser.value.role
-  const targetUserRole = userToDelete.role
-  
-  let canDelete = false
-  
-  if (currentUserRole === 'superadmin') {
-    // SuperAdmin puede eliminar admin y user
-    canDelete = targetUserRole === 'admin' || targetUserRole === 'user'
-  } else if (currentUserRole === 'admin') {
-    // Admin solo puede eliminar user
-    canDelete = targetUserRole === 'user'
-  }
-  
-  if (!canDelete) {
-    addNotification('No tienes permisos para eliminar este usuario', 'error')
-    return
-  }
-  
-  // Eliminar al usuario de la lista
-  users.value = users.value.filter(u => u.id !== userId)
-  
-  // Eliminar al usuario de todos los grupos
-  groups.value.forEach(group => {
-    group.members = group.members.filter(member => member.id !== userId)
-  })
-  
-  // Eliminar las transacciones privadas del usuario (sin grupo)
-  transactions.value = transactions.value.filter(t => 
-    !(t.userId === userId && !t.groupId) // Mantener transacciones de grupo
-  )
-  
 }
 
 const closeModal = () => {
@@ -878,114 +1084,168 @@ const closeModal = () => {
 }
 
 // Métodos de grupos
-const handleCreateGroup = (groupData) => {
-  
-  const newGroup = {
-    id: Date.now(),
-    name: groupData.name,
-    description: groupData.description || '',
-    createdBy: currentUser.value.id,
-    createdAt: new Date().toISOString(),
-    inviteCode: generateInviteCode(),
-    inviteCodeCreatedAt: new Date().toISOString(),
-    inviteCodeUsedCount: 0,
-    inviteCodeMaxUses: 10,
-    inviteCodeExpiresIn: 6, // horas
-    members: [
-      {
-        id: currentUser.value.id,
-        username: currentUser.value.username || currentUser.value.email?.split('@')[0],
-        role: 'admin'
-      }
-    ]
-  }
-  
-  groups.value.push(newGroup)
-  
-  // Si estamos creando un grupo para compartir desde "Mis finanzas"
-  if (pendingGroupForSharing.value) {
-    selectedGroup.value = newGroup
-    showGroupManagementModal.value = false
-    pendingGroupForSharing.value = false
-    
-    // Asegurar que no se abra ningún modal
-    showModal.value = false
-    
-    // Generar código de invitación inmediatamente (sin notificación)
-    handleGenerateInviteCode(newGroup.id, false)
-    
-    // Mostrar notificación de éxito
-    addNotification(`Grupo "${newGroup.name}" creado. Ahora puedes compartirlo.`, 'success', 6000)
-    return
-  }
-  
-  // If we were in the transaction modal, select the new group and reopen the modal
-  if (showGroupManagementModal.value && !showModal.value) {
-    selectedGroup.value = newGroup
-    showGroupManagementModal.value = false
-    showModal.value = false
-  }
-  
+// Función para verificar si un nombre de grupo ya existe (sin importar mayúsculas/minúsculas)
+const isGroupNameTaken = (groupName) => {
+  return groups.value.some(group => 
+    group.name.toLowerCase().trim() === groupName.toLowerCase().trim()
+  )
 }
 
-const handleJoinGroup = (inviteCode) => {
-  const group = groups.value.find(g => g.inviteCode === inviteCode)
-  
-  if (!group) {
-    addNotification('Código de invitación inválido o expirado', 'error')
-    return
-  }
-  
-  // Verificar si el código ha expirado (24 horas)
-  if (group.inviteCodeCreatedAt) {
-    const createdAt = new Date(group.inviteCodeCreatedAt)
-    const now = new Date()
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
-    
-    if (hoursDiff > (group.inviteCodeExpiresIn || 6)) {
-      addNotification('Este código ha caducado. Pide que te envíen un nuevo código de invitación.', 'error')
+const handleCreateGroup = async (groupData) => {
+  try {
+    console.log('🏗️ Creando grupo:', groupData.name, 'por usuario:', currentUser.value?.email)
+    // Verificar si el nombre ya existe
+    if (isGroupNameTaken(groupData.name)) {
+      addNotification('Ya existe un grupo con ese nombre. Elige un nombre diferente.', 'error')
       return
     }
-  }
-  
-  // Verificar si se ha alcanzado el límite de usos
-  if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 10)) {
-    addNotification('Este código ya fue usado el máximo de veces. Pide que te envíen un nuevo código de invitación.', 'error')
-    return
-  }
-  
-  const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
-  if (isAlreadyMember) {
-    addNotification('Ya eres miembro de este grupo', 'warning')
-    return
-  }
-  
-  // Agregar usuario al grupo
-  group.members.push({
-    id: currentUser.value.id,
-    username: currentUser.value.username || currentUser.value.email?.split('@')[0],
-    role: 'member'
-  })
-  
-  // Incrementar contador de usos
-  group.inviteCodeUsedCount = (group.inviteCodeUsedCount || 0) + 1
-  
-  // Calcular usos restantes
-  const usesLeft = (group.inviteCodeMaxUses || 10) - group.inviteCodeUsedCount
-  
-  if (usesLeft > 0) {
-    addNotification(`¡Te has unido al grupo "${group.name}"! Quedan ${usesLeft} usos del código.`, 'success')
-  } else {
-    addNotification(`¡Te has unido al grupo "${group.name}"! Este código ya no puede usarse más.`, 'success')
+    
+    const newGroup = {
+      id: Date.now(),
+      name: groupData.name.trim(), // Limpiar espacios
+      description: groupData.description || '',
+      createdBy: currentUser.value.id,
+      createdAt: new Date().toISOString(),
+      inviteCode: generateInviteCode(),
+      inviteCodeCreatedAt: new Date().toISOString(),
+      inviteCodeUsedCount: 0,
+      inviteCodeMaxUses: 10,
+      inviteCodeExpiresIn: 6,
+      members: [
+        {
+          id: currentUser.value.id,
+          username: currentUser.value.username || currentUser.value.email?.split('@')[0],
+          role: 'admin'
+        }
+      ]
+    }
+    
+    await firestoreService.addGroup(newGroup)
+    
+    // Si estamos creando un grupo para compartir desde "Mis finanzas"
+    if (pendingGroupForSharing.value) {
+      selectedGroup.value = newGroup
+      showGroupManagementModal.value = false
+      pendingGroupForSharing.value = false
+      showModal.value = false
+      
+      handleGenerateInviteCode(newGroup.id, false)
+      addNotification(`Grupo "${newGroup.name}" creado. Ahora puedes compartirlo.`, 'success', 6000)
+      return
+    }
+    
+    if (showGroupManagementModal.value && !showModal.value) {
+      selectedGroup.value = newGroup
+      showGroupManagementModal.value = false
+      showModal.value = false
+    }
+  } catch (error) {
+    console.error('Error creando grupo:', error)
+    addNotification('Error creando el grupo', 'error')
   }
 }
 
-const handleRemoveMember = ({ groupId, memberId }) => {
-  const group = groups.value.find(g => g.id === groupId)
-  if (!group) return
+// Función para generar un nombre único para grupos con conflicto de nombres
+const generateUniqueGroupName = (originalName) => {
+  // Si el usuario ya tiene un grupo con ese nombre, agregar # al inicio
+  const userGroups = groups.value.filter(g => 
+    g.members.some(m => m.id === currentUser.value.id)
+  )
   
-  group.members = group.members.filter(m => m.id !== memberId)
+  const hasNameConflict = userGroups.some(g => 
+    g.name.toLowerCase().trim() === originalName.toLowerCase().trim()
+  )
   
+  if (hasNameConflict) {
+    return `#${originalName}`
+  }
+  
+  return originalName
+}
+
+const handleJoinGroup = async (inviteCode) => {
+  try {
+    const group = groups.value.find(g => g.inviteCode === inviteCode)
+    
+    if (!group) {
+      addNotification('Código de invitación inválido o expirado', 'error')
+      return
+    }
+    
+    // Verificar si ya es miembro antes de hacer otras validaciones
+    const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
+    if (isAlreadyMember) {
+      addNotification('Ya eres miembro de este grupo', 'warning')
+      return
+    }
+    
+    if (group.inviteCodeCreatedAt) {
+      const createdAt = new Date(group.inviteCodeCreatedAt)
+      const now = new Date()
+      const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
+      
+      if (hoursDiff > (group.inviteCodeExpiresIn || 6)) {
+        addNotification('Este código ha caducado. Pide que te envíen un nuevo código de invitación.', 'error')
+        return
+      }
+    }
+    
+    if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 10)) {
+      addNotification('Este código ya fue usado el máximo de veces. Pide que te envíen un nuevo código de invitación.', 'error')
+      return
+    }
+    
+    // Verificar si el usuario ya tiene un grupo con el mismo nombre
+    const originalGroupName = group.name
+    const displayName = generateUniqueGroupName(originalGroupName)
+    
+    const newMember = {
+      id: currentUser.value.id,
+      username: currentUser.value.username || currentUser.value.email?.split('@')[0],
+      role: 'member',
+      displayName: displayName !== originalGroupName ? displayName : undefined // Solo guardar si es diferente
+    }
+    
+    const updatedGroup = {
+      ...group,
+      members: [...group.members, newMember],
+      inviteCodeUsedCount: (group.inviteCodeUsedCount || 0) + 1
+    }
+    
+    await firestoreService.updateGroup(group.id, updatedGroup)
+    
+    const usesLeft = (group.inviteCodeMaxUses || 10) - updatedGroup.inviteCodeUsedCount
+    
+    const joinMessage = displayName !== originalGroupName 
+      ? `¡Te has unido al grupo "${displayName}" (nombre original: "${originalGroupName}")!`
+      : `¡Te has unido al grupo "${group.name}"!`
+    
+    if (usesLeft > 0) {
+      addNotification(`${joinMessage} Quedan ${usesLeft} usos del código.`, 'success')
+    } else {
+      addNotification(`${joinMessage} Este código ya no puede usarse más.`, 'success')
+    }
+  } catch (error) {
+    console.error('Error uniéndose al grupo:', error)
+    addNotification('Error uniéndose al grupo', 'error')
+  }
+}
+
+const handleRemoveMember = async ({ groupId, memberId }) => {
+  try {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) return
+    
+    const updatedMembers = group.members.filter(m => m.id !== memberId)
+    
+    await firestoreService.updateGroup(groupId, {
+      ...group,
+      members: updatedMembers
+    })
+  } catch (error) {
+    console.error('Error removiendo miembro:', error)
+    addNotification('Error removiendo el miembro del grupo', 'error')
+  }
 }
 
 const generateInviteCode = () => {
@@ -993,157 +1253,233 @@ const generateInviteCode = () => {
 }
 
 // Función para crear grupo por defecto "Mis finanzas" para nuevos usuarios
-const createDefaultGroup = (user) => {
-  // Verificar si el usuario ya tiene un grupo "Mis finanzas"
-  const existingGroup = groups.value.find(g => 
-    g.createdBy === user.id && g.name === 'Mis finanzas'
-  )
-  
-  if (existingGroup) {
-    console.log(`ℹ️ Usuario ${user.email} ya tiene un grupo "Mis finanzas"`)
-    return existingGroup
-  }
-  
-  const defaultGroup = {
-    id: Date.now() + Math.random(), // ID único
-    name: 'Mis finanzas',
-    description: 'Grupo personal para gestionar mis finanzas',
-    createdBy: user.id,
-    createdAt: new Date().toISOString(),
-    inviteCode: null, // Sin código de invitación para grupos personales
-    members: [
-      {
-        id: user.id,
-        username: user.username || user.email?.split('@')[0],
-        role: 'admin'
+const createDefaultGroup = async (user) => {
+  try {
+    console.log('🏗️ Verificando grupo por defecto para usuario:', user.email)
+    console.log('📊 Grupos actualmente cargados:', groups.value.length)
+    
+    // Verificar si el usuario ya tiene un grupo "Mis finanzas"
+    const existingGroup = groups.value.find(g => 
+      g.createdBy === user.id && g.name === 'Mis finanzas'
+    )
+    
+    if (existingGroup) {
+      console.log('✅ Grupo "Mis finanzas" ya existe para este usuario')
+      return existingGroup
+    }
+    
+    // Si no hay grupos cargados aún, esperar un poco y verificar de nuevo
+    if (groups.value.length === 0) {
+      console.log('⏳ No hay grupos cargados aún, esperando...')
+      // Esperar 2 segundos para que se carguen los datos de Firestore
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Verificar de nuevo después de esperar
+      const existingGroupAfterWait = groups.value.find(g => 
+        g.createdBy === user.id && g.name === 'Mis finanzas'
+      )
+      
+      if (existingGroupAfterWait) {
+        console.log('✅ Grupo "Mis finanzas" encontrado después de esperar')
+        return existingGroupAfterWait
       }
-    ]
+    }
+    
+    console.log('🆕 Creando nuevo grupo "Mis finanzas" para usuario nuevo')
+    
+    const defaultGroup = {
+      id: Date.now() + Math.random(),
+      name: 'Mis finanzas',
+      description: 'Grupo personal para gestionar mis finanzas',
+      createdBy: user.id,
+      createdAt: new Date().toISOString(),
+      inviteCode: null,
+      members: [
+        {
+          id: user.id,
+          username: user.username || user.email?.split('@')[0],
+          role: 'admin'
+        }
+      ]
+    }
+    
+    await firestoreService.addGroup(defaultGroup)
+    
+    return defaultGroup
+  } catch (error) {
+    console.error('Error creando grupo por defecto:', error)
+    return null
   }
-  
-  groups.value.push(defaultGroup)
-  console.log(`✅ Grupo por defecto "Mis finanzas" creado para ${user.email}`)
-  
-  return defaultGroup
 }
 
-const handleGenerateInviteCode = (groupId, showNotification = true) => {
-  const group = groups.value.find(g => g.id === groupId)
-  if (!group) return
-  
-  // Generar nuevo código con información de límites
-  group.inviteCode = generateInviteCode()
-  group.inviteCodeCreatedAt = new Date().toISOString()
-  group.inviteCodeUsedCount = 0
-  group.inviteCodeMaxUses = 10
-  group.inviteCodeExpiresIn = 6
-  
-  // Solo mostrar notificación si se solicita explícitamente
-  if (showNotification) {
-    addNotification('Nuevo código generado (10 usos, válido 6h)', 'success', 5000)
+const handleGenerateInviteCode = async (groupId, showNotification = true) => {
+  try {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) return
+    
+    const updatedGroup = {
+      ...group,
+      inviteCode: generateInviteCode(),
+      inviteCodeCreatedAt: new Date().toISOString(),
+      inviteCodeUsedCount: 0,
+      inviteCodeMaxUses: 10,
+      inviteCodeExpiresIn: 6
+    }
+    
+    await firestoreService.updateGroup(groupId, updatedGroup)
+    
+    if (showNotification) {
+      addNotification('Nuevo código generado', 'success', 5000)
+    }
+  } catch (error) {
+    console.error('Error generando código de invitación:', error)
+    addNotification('Error generando el código de invitación', 'error')
   }
 }
 
-const handleGenerateNewCode = (groupId) => {
-  const group = groups.value.find(g => g.id === groupId)
-  if (!group) return
-  
-  // Generar nuevo código con información de límites
-  group.inviteCode = generateInviteCode()
-  group.inviteCodeCreatedAt = new Date().toISOString()
-  group.inviteCodeUsedCount = 0
-  group.inviteCodeMaxUses = 10
-  group.inviteCodeExpiresIn = 6
+const handleGenerateNewCode = async (groupId) => {
+  try {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) return
+    
+    const updatedGroup = {
+      ...group,
+      inviteCode: generateInviteCode(),
+      inviteCodeCreatedAt: new Date().toISOString(),
+      inviteCodeUsedCount: 0,
+      inviteCodeMaxUses: 10,
+      inviteCodeExpiresIn: 6
+    }
+    
+    await firestoreService.updateGroup(groupId, updatedGroup)
+  } catch (error) {
+    console.error('Error generando nuevo código:', error)
+    addNotification('Error generando el código de invitación', 'error')
+  }
 }
 
-const handleLeaveGroup = (groupId) => {
-  const group = groups.value.find(g => g.id === groupId)
-  if (!group || !currentUser.value) return
-  
-  // Remover al usuario actual de los miembros del grupo
-  group.members = group.members.filter(member => member.id !== currentUser.value.id)
-  
-  // Si el grupo seleccionado es el que se está abandonando, resetear selección
-  if (selectedGroup.value && selectedGroup.value.id === groupId) {
-    selectedGroup.value = null
+const handleLeaveGroup = async (groupId) => {
+  try {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group || !currentUser.value) return
+    
+    const updatedMembers = group.members.filter(member => member.id !== currentUser.value.id)
+    
+    await firestoreService.updateGroup(groupId, {
+      ...group,
+      members: updatedMembers
+    })
+    
+    if (selectedGroup.value && selectedGroup.value.id === groupId) {
+      selectedGroup.value = null
+    }
+    
+    addNotification(`Has salido del grupo "${group.name}"`, 'success')
+  } catch (error) {
+    console.error('Error saliendo del grupo:', error)
+    addNotification('Error saliendo del grupo', 'error')
   }
-  
-  addNotification(`Has salido del grupo "${group.name}"`, 'success')
 }
 
-const handleDeleteGroup = (groupId) => {
-  const group = groups.value.find(g => g.id === groupId)
-  if (!group) {
-    addNotification('Grupo no encontrado', 'error')
-    return
+const handleDeleteGroup = async (groupId) => {
+  try {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group) {
+      addNotification('Grupo no encontrado', 'error')
+      return
+    }
+    
+    // Proteger el grupo "Mis finanzas" - no se puede eliminar
+    if (group.name === 'Mis finanzas' || 
+        group.description?.includes('Grupo personal') ||
+        (group.inviteCode === null && group.name.toLowerCase().includes('finanzas'))) {
+      addNotification('No se puede eliminar el grupo "Mis finanzas". Es tu grupo personal.', 'error')
+      return
+    }
+    
+    const currentUserRole = currentUser.value.role
+    let canDelete = false
+    
+    if (currentUserRole === 'superadmin') {
+      canDelete = true
+    } else if (currentUserRole === 'admin') {
+      const groupCreator = users.value.find(u => u.id === group.createdBy)
+      canDelete = groupCreator && groupCreator.role === 'user'
+    } else if (currentUserRole === 'user') {
+      canDelete = group.createdBy === currentUser.value.id
+    }
+    
+    if (!canDelete) {
+      addNotification('No tienes permisos para eliminar este grupo', 'error')
+      return
+    }
+    
+    // Eliminar grupo
+    await firestoreService.deleteGroup(groupId)
+    
+    // Eliminar transacciones del grupo
+    const groupTransactions = transactions.value.filter(t => t.groupId === groupId)
+    for (const transaction of groupTransactions) {
+      await firestoreService.deleteTransaction(transaction.id)
+    }
+    
+    if (selectedGroup.value && selectedGroup.value.id === groupId) {
+      selectedGroup.value = null
+    }
+    
+    addNotification(`Grupo "${group?.name || 'Grupo'}" eliminado correctamente`, 'success')
+  } catch (error) {
+    console.error('Error eliminando grupo:', error)
+    addNotification('Error eliminando el grupo', 'error')
   }
-  
-  // Verificar permisos de eliminación
-  const currentUserRole = currentUser.value.role
-  let canDelete = false
-  
-  if (currentUserRole === 'superadmin') {
-    // SuperAdmin puede eliminar cualquier grupo
-    canDelete = true
-  } else if (currentUserRole === 'admin') {
-    // Admin puede eliminar grupos creados por usuarios con rol 'user'
-    const groupCreator = users.value.find(u => u.id === group.createdBy)
-    canDelete = groupCreator && groupCreator.role === 'user'
-  } else if (currentUserRole === 'user') {
-    // Usuario regular solo puede eliminar grupos que creó
-    canDelete = group.createdBy === currentUser.value.id
-  }
-  
-  if (!canDelete) {
-    addNotification('No tienes permisos para eliminar este grupo', 'error')
-    return
-  }
-  
-  // Eliminar el grupo
-  groups.value = groups.value.filter(g => g.id !== groupId)
-  
-  // Eliminar todas las transacciones del grupo
-  transactions.value = transactions.value.filter(t => t.groupId !== groupId)
-  
-  // Si el grupo seleccionado es el que se está eliminando, resetear selección
-  if (selectedGroup.value && selectedGroup.value.id === groupId) {
-    selectedGroup.value = null
-  }
-  
-  addNotification(`Grupo "${group?.name || 'Grupo'}" eliminado correctamente`, 'success')
 }
 
-const handleHideGroup = (groupId) => {
-  const group = groups.value.find(g => g.id === groupId)
-  if (!group || !currentUser.value) return
-  
-  // Inicializar el array hiddenFor si no existe
-  if (!group.hiddenFor) {
-    group.hiddenFor = []
+const handleHideGroup = async (groupId) => {
+  try {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group || !currentUser.value) return
+    
+    const hiddenFor = group.hiddenFor || []
+    
+    if (!hiddenFor.includes(currentUser.value.id)) {
+      const updatedGroup = {
+        ...group,
+        hiddenFor: [...hiddenFor, currentUser.value.id]
+      }
+      
+      await firestoreService.updateGroup(groupId, updatedGroup)
+    }
+    
+    if (selectedGroup.value && selectedGroup.value.id === groupId) {
+      selectedGroup.value = null
+    }
+    
+    addNotification(`Grupo "${group.name}" ocultado correctamente`, 'success')
+  } catch (error) {
+    console.error('Error ocultando grupo:', error)
+    addNotification('Error ocultando el grupo', 'error')
   }
-  
-  // Agregar el usuario actual a la lista de usuarios que tienen oculto el grupo
-  if (!group.hiddenFor.includes(currentUser.value.id)) {
-    group.hiddenFor.push(currentUser.value.id)
-  }
-  
-  // Si el grupo seleccionado es el que se está ocultando, resetear selección
-  if (selectedGroup.value && selectedGroup.value.id === groupId) {
-    selectedGroup.value = null
-  }
-  
-  addNotification(`Grupo "${group.name}" ocultado correctamente`, 'success')
 }
 
-const handleUnhideGroup = (groupId) => {
-  const group = groups.value.find(g => g.id === groupId)
-  if (!group || !currentUser.value) return
-  
-  // Remover el usuario actual de la lista de usuarios que tienen oculto el grupo
-  if (group.hiddenFor) {
-    group.hiddenFor = group.hiddenFor.filter(userId => userId !== currentUser.value.id)
+const handleUnhideGroup = async (groupId) => {
+  try {
+    const group = groups.value.find(g => g.id === groupId)
+    if (!group || !currentUser.value) return
+    
+    if (group.hiddenFor) {
+      const updatedGroup = {
+        ...group,
+        hiddenFor: group.hiddenFor.filter(userId => userId !== currentUser.value.id)
+      }
+      
+      await firestoreService.updateGroup(groupId, updatedGroup)
+    }
+    
+    addNotification(`Grupo "${group.name}" ahora es visible`, 'success')
+  } catch (error) {
+    console.error('Error mostrando grupo:', error)
+    addNotification('Error mostrando el grupo', 'error')
   }
-  
-  addNotification(`Grupo "${group.name}" ahora es visible`, 'success')
 }
 
 // Procesamiento de invitaciones (para futuro)

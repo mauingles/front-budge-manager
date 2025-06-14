@@ -4,6 +4,15 @@ const notifications = ref([])
 
 export function useNotifications() {
   const addNotification = (message, type = 'info', duration = 5000) => {
+    // Evitar duplicados de la misma notificación
+    const isDuplicate = notifications.value.some(n => 
+      n.message === message && n.type === type
+    )
+    
+    if (isDuplicate) {
+      return null
+    }
+    
     const id = Date.now() + Math.random()
     const notification = {
       id,

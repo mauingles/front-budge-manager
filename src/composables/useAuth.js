@@ -104,7 +104,6 @@ export function useAuth() {
       const result = await getRedirectResult(auth)
       if (result) {
         user.value = result.user
-        console.log('Login exitoso con redirect:', result.user)
       }
     } catch (err) {
       console.error('Error al obtener resultado de redirect:', err)
@@ -113,10 +112,16 @@ export function useAuth() {
     
     // Configurar listener de cambios de autenticación
     onAuthStateChanged(auth, (authUser) => {
-      console.log('Auth state changed:', authUser ? authUser.email : 'No user')
       user.value = authUser
       loading.value = false
     })
+    
+    // Fallback: asegurar que loading se ponga en false después de un tiempo
+    setTimeout(() => {
+      if (loading.value) {
+        loading.value = false
+      }
+    }, 3000)
   })
 
   return {

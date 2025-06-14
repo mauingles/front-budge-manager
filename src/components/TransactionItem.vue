@@ -1,5 +1,12 @@
 <template>
-  <div ref="transactionRef" :class="['transaction', { 'expanded': isExpanded }]" @click="toggleExpand">
+  <div @click="toggleExpanded" ref="transactionRef" :class="['transaction', { 'expanded': isExpanded }]">
+    <!-- Botón chevron siempre en esquina superior derecha (solo móvil) -->
+    <button v-if="isMobile" @click="toggleExpanded" class="chevron-btn" :title="isExpanded ? 'Ocultar detalles' : 'Ver detalles'">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="6,9 12,15 18,9"></polyline>
+      </svg>
+    </button>
+    
     <!-- Vista compacta para móvil -->
     <div class="mobile-compact" v-if="isMobile && !isExpanded">
       <div class="compact-info">
@@ -61,15 +68,28 @@ const updateWindowWidth = () => {
   }
 }
 
-// Función para alternar expansión
-const toggleExpand = () => {
-  if (isMobile.value) {
-    isExpanded.value = !isExpanded.value
-  }
-}
 
 // Función para formatear la fecha correctamente
-const formatDate = (dateString) => {
+const formatDate = (dateValue) => {
+  // Verificar si es null o undefined
+  if (!dateValue) {
+    return 'Sin fecha'
+  }
+  
+  // Convertir a string si no lo es
+  let dateString = dateValue
+  if (typeof dateValue !== 'string') {
+    // Si es un objeto Date o Timestamp de Firestore
+    if (dateValue.toDate && typeof dateValue.toDate === 'function') {
+      dateString = dateValue.toDate().toLocaleDateString('es-ES')
+    } else if (dateValue instanceof Date) {
+      dateString = dateValue.toLocaleDateString('es-ES')
+    } else {
+      // Intentar convertir a string
+      dateString = String(dateValue)
+    }
+  }
+  
   // Si la fecha incluye coma y hora, devolverla tal como está
   if (dateString && dateString.includes(',')) {
     return dateString.replace(',', '\xa0')
@@ -84,8 +104,11 @@ const formatDate = (dateString) => {
 }
 
 // Función para formatear fecha compacta (solo día/mes y hora)
-const formatCompactDate = (dateString) => {
-  if (dateString && dateString.includes(',')) {
+const formatCompactDate = (dateValue) => {
+  // Usar la función formatDate para asegurar que tenemos un string
+  const dateString = formatDate(dateValue)
+  
+  if (dateString && typeof dateString === 'string' && dateString.includes(',')) {
     // "DD/MM/YYYY, HH:MM" -> "DD/MM HH:MM"
     const parts = dateString.split(', ')
     if (parts.length === 2) {
@@ -95,48 +118,20 @@ const formatCompactDate = (dateString) => {
       return `${day}/${month} ${timePart}`
     }
   }
-  return formatDate(dateString)
+  return dateString
 }
 
-// Función para manejar el scroll
-const handleScroll = () => {
-  if (isExpanded.value && isMobile.value) {
-    isExpanded.value = false
-  }
-}
-
-// Función para encontrar el contenedor de scroll más cercano
-const findScrollContainer = (element) => {
-  let parent = element.parentElement
-  while (parent) {
-    const style = window.getComputedStyle(parent)
-    if (style.overflowY === 'auto' || style.overflowY === 'scroll' || parent.classList.contains('list')) {
-      return parent
-    }
-    parent = parent.parentElement
-  }
-  return window
+// Función para toggle del estado expandido
+const toggleExpanded = () => {
+  isExpanded.value = !isExpanded.value
 }
 
 onMounted(() => {
   window.addEventListener('resize', updateWindowWidth)
-  
-  // Agregar listener para scroll en el contenedor padre de scroll
-  if (transactionRef.value) {
-    scrollContainer = findScrollContainer(transactionRef.value)
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
-    }
-  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateWindowWidth)
-  
-  // Remover listener de scroll
-  if (scrollContainer) {
-    scrollContainer.removeEventListener('scroll', handleScroll)
-  }
 })
 
 defineEmits(['delete', 'edit'])
@@ -224,6 +219,33 @@ defineEmits(['delete', 'edit'])
 @keyframes shimmer {
   0%, 100% { opacity: 0.4; transform: translateX(-15px); }
   50% { opacity: 0.7; transform: translateX(15px); }
+}
+
+/* Botón chevron elegante y consistente */
+.chevron-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  border: 0px;
+}
+
+.chevron-btn svg {
+  width: 14x;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.transaction.expanded .chevron-btn svg {
+  transform: rotate(180deg);
 }
 
 @keyframes subtlePulse {
@@ -400,6 +422,7 @@ defineEmits(['delete', 'edit'])
   
   .compact-amount {
     font-size: 14px;
+    margin-top: 22px;
   }
   
   /* Vista expandida en móvil muy pequeño */

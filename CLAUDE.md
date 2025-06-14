@@ -9,13 +9,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build locally
 
-### Server
-- `cd server && npm start` - Start Express API server on port 3001
-- `cd server && npm run dev` - Start server with nodemon for development
-
 ### Setup
 - `npm install` - Install frontend dependencies
-- `cd server && npm install` - Install backend dependencies
+
+### Data Storage
+- **Firebase/Firestore**: All data is stored in Firebase Firestore for all environments (localhost and production)
+- **Real-time Sync**: Automatic real-time synchronization across all clients
 
 ## Architecture
 
@@ -23,17 +22,17 @@ This is a sophisticated Vue 3 budget management application with group collabora
 
 ### Technology Stack
 - **Frontend**: Vue 3 (Composition API), Vite 6.2.4
-- **Backend**: Express.js with JSON file storage
+- **Backend**: Firebase Firestore (real-time database)
 - **Authentication**: Firebase (Google OAuth) + Local system
 - **Styling**: Vanilla CSS with custom design system
-- **State Management**: Centralized reactive state in App.vue
+- **State Management**: Centralized reactive state in App.vue with real-time Firestore listeners
 - **UI System**: Custom modal system with Teleport, toast notifications, confirmation dialogs
 
 ### Key Architecture Patterns
 - **Centralized State**: All global state managed in App.vue with reactive refs
 - **Permission-Based Rendering**: Dynamic UI based on user roles and group membership
 - **Dual Authentication**: Firebase for regular users, local auth for admins
-- **Auto-save**: Reactive watchers automatically persist changes to server
+- **Real-time Data**: All changes sync automatically via Firestore real-time listeners
 - **Composable Pattern**: Reusable logic in `useAuth.js`, `useNotifications.js`, `useConfirm.js`
 - **Teleport-based Modals**: All modals render directly to document.body for proper layering
 
@@ -161,18 +160,19 @@ This is a sophisticated Vue 3 budget management application with group collabora
 - **totalIncome/totalExpenses**: Real-time financial calculations with group filtering
 - **hasGroupAccess**: Dynamic permission checking function
 
-### API & Data Persistence
+### Data Persistence & Real-time Sync
 
-#### Backend Architecture
-- **Express Server**: RESTful API on port 3001 with CORS configuration
-- **JSON File Storage**: Persistent file-based storage with fs-extra
-- **Auto-sync Watchers**: Frontend changes automatically saved via reactive watchers
-- **Connection Monitoring**: Real-time connection status with error handling
+#### Firebase Firestore Architecture
+- **Cloud Database**: Scalable NoSQL document database
+- **Real-time Listeners**: Automatic updates when data changes across all clients
+- **Offline Support**: Built-in offline capabilities with automatic sync when back online
+- **Security Rules**: Server-side security and validation
 
-#### API Endpoints
-- `GET/POST /api/data` - Complete application state synchronization
-- **Real-time Sync**: Watchers automatically trigger saves on state changes
-- **Error Handling**: Connection status indicators and offline tolerance
+#### Real-time Operations
+- **Automatic Sync**: All CRUD operations sync instantly across all connected clients
+- **Optimistic Updates**: UI updates immediately with server confirmation
+- **Conflict Resolution**: Firestore handles concurrent updates automatically
+- **Connection Status**: Real-time monitoring of Firebase connection state
 
 ### UI/UX Patterns
 
@@ -219,7 +219,7 @@ This is a sophisticated Vue 3 budget management application with group collabora
 - **Promise-based Confirmations**: Async/await confirmation dialogs
 - **Real-time Feedback**: Immediate user feedback for all actions (create, edit, delete)
 - **Loading States**: Spinner and connection status indicators
-- **Offline Tolerance**: Graceful degradation when server is unavailable
+- **Offline Tolerance**: Firestore's built-in offline support with automatic sync
 
 ### Security Considerations
 - **Client-side Validation**: Comprehensive form validation and permission checks

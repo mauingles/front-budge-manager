@@ -23,6 +23,8 @@ const defaultData = {
   ],
   transactions: [
   ],
+  groups: [
+  ],
   settings: {
     masterPassword: 'admin123',
     selectedMonth: '2024-12'
@@ -189,6 +191,85 @@ app.post('/api/users', async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ error: 'Error adding user' });
+  }
+});
+
+// GET - Obtener grupos
+app.get('/api/groups', async (req, res) => {
+  try {
+    const data = await readData();
+    res.json(data.groups || []);
+  } catch (error) {
+    res.status(500).json({ error: 'Error fetching groups' });
+  }
+});
+
+// POST - Agregar nuevo grupo
+app.post('/api/groups', async (req, res) => {
+  try {
+    const data = await readData();
+    const newGroup = {
+      ...req.body,
+      id: Date.now()
+    };
+    data.groups.push(newGroup);
+    
+    const success = await writeData(data);
+    if (success) {
+      res.json(newGroup);
+    } else {
+      res.status(500).json({ error: 'Error saving group' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error adding group' });
+  }
+});
+
+// PUT - Actualizar grupo
+app.put('/api/groups/:id', async (req, res) => {
+  try {
+    const data = await readData();
+    const groupId = parseInt(req.params.id);
+    const index = data.groups.findIndex(g => g.id === groupId);
+    
+    if (index === -1) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    
+    data.groups[index] = { ...req.body, id: groupId };
+    
+    const success = await writeData(data);
+    if (success) {
+      res.json(data.groups[index]);
+    } else {
+      res.status(500).json({ error: 'Error updating group' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error updating group' });
+  }
+});
+
+// DELETE - Eliminar grupo
+app.delete('/api/groups/:id', async (req, res) => {
+  try {
+    const data = await readData();
+    const groupId = parseInt(req.params.id);
+    const initialLength = data.groups.length;
+    
+    data.groups = data.groups.filter(g => g.id !== groupId);
+    
+    if (data.groups.length === initialLength) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    
+    const success = await writeData(data);
+    if (success) {
+      res.json({ message: 'Group deleted successfully' });
+    } else {
+      res.status(500).json({ error: 'Error deleting group' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error deleting group' });
   }
 });
 

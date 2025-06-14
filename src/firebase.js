@@ -28,15 +28,25 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 })
 
-// Configurar para desarrollo local
-if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-  googleProvider.setCustomParameters({
-    ...googleProvider.customParameters,
-    'hd': '' // Permite cualquier dominio
+// Información de debug
+if (typeof window !== 'undefined') {
+  console.log('🔥 Firebase Config:', {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+    hostname: window.location.hostname,
+    url: window.location.href
   })
   
-  // Para debugging Firestore en desarrollo
-  console.log('🔧 Modo desarrollo detectado')
+  if (window.location.hostname === 'localhost') {
+    googleProvider.setCustomParameters({
+      ...googleProvider.customParameters,
+      'hd': '' // Permite cualquier dominio
+    })
+    
+    console.log('🔧 Modo desarrollo detectado')
+  } else {
+    console.log('🌍 Modo producción detectado')
+  }
 }
 
 export default app

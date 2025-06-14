@@ -6,7 +6,7 @@ class ApiService {
     this.errorMessage = ''
   }
 
-  // Simular el comportamiento del API anterior pero usando Firestore
+  // Siempre usar Firestore para todos los entornos
   async getAllData() {
     try {
       this.isOnline = true
@@ -113,25 +113,6 @@ class ApiService {
     }
   }
 
-  // Método para migrar datos del servidor local
-  async migrateFromServer() {
-    try {
-      console.log('🔄 Intentando migrar datos del servidor local...')
-      const response = await fetch('http://localhost:3001/api/data')
-      if (response.ok) {
-        const localData = await response.json()
-        console.log('📦 Datos del servidor local obtenidos:', Object.keys(localData))
-        await saveAppData(localData)
-        console.log('✅ Migración completada desde servidor local')
-        return localData
-      }
-    } catch (error) {
-      console.log('⚠️ No se pudo conectar al servidor local (normal en producción)')
-    }
-    
-    // Si no hay servidor local, usar datos por defecto
-    return await this.getAllData()
-  }
 }
 
 export default new ApiService()
