@@ -13,8 +13,7 @@
     <BaseModal :show="showModal" @close="closeModal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Dividir gastos</h3>
-          <p class="modal-subtitle">Selecciona cómo dividir los gastos entre los miembros</p>
+          <span class="modal-subtitle" >Selecciona cómo dividir los gastos entre los miembros</span>
         </div>
         
         <div class="division-list">
@@ -40,73 +39,6 @@
               </svg>
             </div>
           </div>
-          
-          <div 
-            @click="selectDivision('percentage')" 
-            :class="['division-item', { 'selected': selectedDivision === 'percentage' }]"
-          >
-            <div class="division-icon-container">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M8 8l8 8"/>
-                <circle cx="9" cy="9" r="2"/>
-                <circle cx="15" cy="15" r="2"/>
-              </svg>
-            </div>
-            <div class="division-info">
-              <span class="division-name">Por porcentaje</span>
-              <span class="division-desc">Asignar porcentajes específicos</span>
-            </div>
-            <div v-if="selectedDivision === 'percentage'" class="check-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20,6 9,17 4,12"/>
-              </svg>
-            </div>
-          </div>
-
-          <div 
-            @click="selectDivision('custom')" 
-            :class="['division-item', { 'selected': selectedDivision === 'custom' }]"
-          >
-            <div class="division-icon-container">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 1v22"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-            </div>
-            <div class="division-info">
-              <span class="division-name">Montos específicos</span>
-              <span class="division-desc">Asignar cantidades exactas</span>
-            </div>
-            <div v-if="selectedDivision === 'custom'" class="check-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20,6 9,17 4,12"/>
-              </svg>
-            </div>
-          </div>
-
-          <div 
-            @click="selectDivision('none')" 
-            :class="['division-item', { 'selected': selectedDivision === 'none' }]"
-          >
-            <div class="division-icon-container none-division">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                <line x1="9" y1="9" x2="9.01" y2="9"/>
-                <line x1="15" y1="9" x2="15.01" y2="9"/>
-              </svg>
-            </div>
-            <div class="division-info">
-              <span class="division-name">Sin dividir</span>
-              <span class="division-desc">Gasto personal completo</span>
-            </div>
-            <div v-if="selectedDivision === 'none'" class="check-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                <polyline points="20,6 9,17 4,12"/>
-              </svg>
-            </div>
-          </div>
         </div>
       </div>
     </BaseModal>
@@ -114,11 +46,6 @@
     <!-- Modal de resultados de división -->
     <BaseModal :show="showResultsModal" @close="showResultsModal = false">
       <div class="results-modal">
-        <div class="results-header">
-          <h3>División de gastos - Todos por igual</h3>
-          <p class="results-subtitle">{{ selectedGroup?.name }}</p>
-        </div>
-        
         <div v-if="divisionResults.transfers && divisionResults.transfers.length > 0" class="results-content">
           <div class="summary">
             <div class="summary-item">
@@ -324,9 +251,9 @@ const closeResultsModal = () => {
 
 .modal-subtitle {
   margin: 0;
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 400;
+  font-size: 12x;
+  color: #000;
+  font-weight: 600;
   line-height: 1.4;
 }
 

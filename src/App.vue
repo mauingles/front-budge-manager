@@ -43,13 +43,14 @@
             </svg>
             Gastos
           </button>
+          <DatePicker v-model="selectedMonth" />
           <ExpenseDivisionModal 
             :selected-group="selectedGroup"
             :transactions="transactions"
             :selected-month="selectedMonth"
             @division-change="handleDivisionChange"
           />
-          <DatePicker v-model="selectedMonth" />
+          
           <button @click="showUserModal = true" class="btn" title="Perfil de usuario">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -922,7 +923,7 @@ const handleCreateGroup = (groupData) => {
   if (showGroupManagementModal.value && !showModal.value) {
     selectedGroup.value = newGroup
     showGroupManagementModal.value = false
-    showModal.value = true
+    showModal.value = false
   }
   
 }

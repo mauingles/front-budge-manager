@@ -14,9 +14,7 @@
         class="btn btn-share-mini"
         title="Compartir grupo"
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 10px; height: 10px;">
-          <path d="M2 21L23 12L2 3L2 10L17 12L2 14L2 21Z"/>
-        </svg>
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M20 13L20 18C20 19.1046 19.1046 20 18 20L6 20C4.89543 20 4 19.1046 4 18L4 13" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M16 8L12 4M12 4L8 8M12 4L12 16" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
       </button>
     </div>
     
@@ -504,7 +502,7 @@ const getActiveGroupName = () => {
   border: 1px solid #25d366;
   border-radius: 4px;
   padding: 2px;
-  width: 18px;
+  width: 32px;
   height: 36px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -513,6 +511,14 @@ const getActiveGroupName = () => {
   justify-content: center;
   flex-shrink: 0;
   box-shadow: none;
+}
+
+.btn-share-mini svg {
+  width: 22px;
+}
+
+.btn-share-mini path {
+  stroke: #fff;
 }
 
 .btn-share-mini:hover {
@@ -588,14 +594,15 @@ const getActiveGroupName = () => {
   }
   
   .btn-share-mini {
-    width: 16px;
+    width: 28px;
     height: 32px;
     padding: 1px;
+    min-width: unset;
   }
   
   .btn-share-mini svg {
-    width: 8px !important;
-    height: 8px !important;
+    width: 14px !important;
+    height: 14px !important;
   }
 }
 </style>
