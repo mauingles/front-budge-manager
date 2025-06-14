@@ -254,7 +254,7 @@ const openWhatsApp = () => {
   const group = props.modelValue
   if (!group || !group.inviteCode) return
   
-  const message = `Te invito a participar en la app https://budge-manager.netlify.app?groupCode=${group.inviteCode} de mi grupo "${group.name}"`
+  const message = `Te invito a participar en la app https://budge-manager.netlify.app/?groupCode=${group.inviteCode} de mi grupo "${group.name}"`
   const encodedMessage = encodeURIComponent(message)
   
   // Detectar si es dispositivo móvil

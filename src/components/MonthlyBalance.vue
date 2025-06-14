@@ -164,7 +164,7 @@ const openWhatsApp = () => {
   const group = internalSelectedGroup.value
   if (!group || !group.inviteCode) return
   
-  const message = `Te invito a participar en la app https://budge-manager.netlify.app?groupCode=${group.inviteCode} de mi grupo "${group.name}"`
+  const message = `Te invito a participar en la app https://budge-manager.netlify.app/?groupCode=${group.inviteCode} de mi grupo "${group.name}"`
   const encodedMessage = encodeURIComponent(message)
   const whatsappUrl = `https://wa.me/?text=${encodedMessage}`
   
