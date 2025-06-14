@@ -261,54 +261,28 @@ const openWhatsApp = () => {
   const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
   
   if (isMobile) {
-    // Detectar sistema operativo para URLs específicas
+    // Detectar sistema operativo
     const isAndroid = /Android/i.test(navigator.userAgent)
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
     
     // URLs específicas para cada plataforma
     let whatsappAppUrl
     if (isAndroid) {
-      // Android: intentar WhatsApp normal primero, luego Business
+      // Android: usar intent específico para WhatsApp normal
       whatsappAppUrl = `intent://send?text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`
     } else if (isIOS) {
-      // iOS: usar el esquema estándar de WhatsApp
+      // iOS: usar esquema de WhatsApp
       whatsappAppUrl = `whatsapp://send?text=${encodedMessage}`
     } else {
-      // Otros móviles: usar esquema genérico
+      // Otros móviles
       whatsappAppUrl = `whatsapp://send?text=${encodedMessage}`
     }
     
-    const whatsappWebUrl = `https://wa.me/?text=${encodedMessage}`
-    
-    // Intentar abrir la app nativa
+    // Solo intentar abrir la app, sin fallbacks automáticos
     try {
-      if (isAndroid) {
-        // En Android, usar window.location para intent
-        window.location.href = whatsappAppUrl
-      } else {
-        // En iOS y otros, usar window.open
-        const opened = window.open(whatsappAppUrl, '_self')
-        
-        // Fallback para iOS si no se abre
-        if (!opened) {
-          setTimeout(() => {
-            if (!document.hidden) {
-              window.open(whatsappWebUrl, '_blank')
-            }
-          }, 1500)
-        }
-      }
-      
-      // Fallback general: si no se abre la app en 2 segundos, abrir la versión web
-      setTimeout(() => {
-        if (!document.hidden) {
-          window.open(whatsappWebUrl, '_blank')
-        }
-      }, 2000)
+      window.location.href = whatsappAppUrl
     } catch (error) {
-      console.log('Error abriendo WhatsApp nativo, usando web:', error)
-      // Si falla, usar la versión web directamente
-      window.open(whatsappWebUrl, '_blank')
+      console.log('Error abriendo WhatsApp:', error)
     }
   } else {
     // En desktop, usar siempre WhatsApp Web
