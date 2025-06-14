@@ -132,6 +132,7 @@
       :user-groups="userGroups"
       :all-groups="groups"
       :all-users="users"
+      :selected-group="selectedGroup"
       @close="showGroupManagementModal = false"
       @create-group="handleCreateGroup"
       @join-group="handleJoinGroup"
@@ -440,6 +441,9 @@ const setupRealtimeListeners = () => {
         selectedGroup.value = null
       }
     }
+    
+    // Asegurar que siempre haya un grupo seleccionado
+    autoSelectGroup()
   })
   
   // Listener para configuraciones
@@ -521,8 +525,12 @@ const handleUserAuthentication = async () => {
     }
     
     await handleGroupCode()
+    
+    // Auto-seleccionar grupo después de autenticación
+    autoSelectGroup()
   } else {
     currentUser.value = null
+    selectedGroup.value = null
   }
 }
 
@@ -591,7 +599,10 @@ const cleanupDuplicateGroups = async () => {
     })
   )
   
-  console.log(`🧹 Encontrados ${misFinanzasGroups.length} grupos "Mis finanzas" para este usuario`)
+  // Solo log si hay múltiples grupos
+  if (misFinanzasGroups.length > 1) {
+    console.log(`🧹 Encontrados ${misFinanzasGroups.length} grupos "Mis finanzas" para este usuario`)
+  }
   
   if (misFinanzasGroups.length > 1) {
     console.log('🗑️ Eliminando grupos duplicados...')
@@ -600,14 +611,23 @@ const cleanupDuplicateGroups = async () => {
     const keepGroup = sortedGroups[0]
     const toDelete = sortedGroups.slice(1)
     
+    let actuallyDeleted = 0
     for (const group of toDelete) {
       console.log(`🗑️ Eliminando grupo duplicado: ${group.id}`)
-      await firestoreService.deleteGroup(group.id)
+      try {
+        await firestoreService.deleteGroup(group.id)
+        actuallyDeleted++
+      } catch (error) {
+        console.error(`❌ Error eliminando grupo duplicado ${group.id}:`, error)
+      }
     }
     
-    // Seleccionar el grupo que se mantiene
-    selectedGroup.value = keepGroup
-    addNotification('Grupos duplicados limpiados', 'success', 2000)
+    // Solo mostrar mensaje si realmente se eliminaron grupos
+    if (actuallyDeleted > 0) {
+      // Seleccionar el grupo que se mantiene
+      selectedGroup.value = keepGroup
+      addNotification('Grupos duplicados limpiados', 'success', 2000)
+    }
   }
 }
 
@@ -661,6 +681,61 @@ onUnmounted(() => {
   firestoreService.unsubscribeAll()
 })
 
+// Función para seleccionar automáticamente un grupo cuando no hay ninguno seleccionado
+const autoSelectGroup = () => {
+  if (!currentUser.value || selectedGroup.value) return
+  
+  console.log('🔍 Auto-seleccionando grupo...')
+  
+  // Obtener grupos accesibles para el usuario actual
+  const accessibleGroups = userGroups.value
+  
+  if (accessibleGroups.length === 0) {
+    console.log('⚠️ No hay grupos accesibles para auto-seleccionar')
+    return
+  }
+  
+  // Prioridades para la selección automática:
+  // 1. Grupo "Mis finanzas" del usuario actual
+  // 2. Primer grupo donde el usuario es admin
+  // 3. Primer grupo donde el usuario es miembro
+  // 4. Primer grupo accesible
+  
+  let groupToSelect = null
+  
+  // 1. Buscar "Mis finanzas" del usuario
+  groupToSelect = accessibleGroups.find(g => 
+    g.name === 'Mis finanzas' && g.createdBy === currentUser.value.id
+  )
+  
+  // 2. Si no hay "Mis finanzas", buscar grupo donde es admin
+  if (!groupToSelect) {
+    groupToSelect = accessibleGroups.find(g => {
+      const member = g.members?.find(m => m.id === currentUser.value.id)
+      return member?.role === 'admin'
+    })
+  }
+  
+  // 3. Si no es admin de ninguno, buscar donde es miembro
+  if (!groupToSelect) {
+    groupToSelect = accessibleGroups.find(g => 
+      g.members?.some(m => m.id === currentUser.value.id)
+    )
+  }
+  
+  // 4. Si nada más funciona, tomar el primer grupo accesible
+  if (!groupToSelect) {
+    groupToSelect = accessibleGroups[0]
+  }
+  
+  if (groupToSelect) {
+    console.log('✅ Auto-seleccionado grupo:', groupToSelect.name)
+    selectedGroup.value = groupToSelect
+  } else {
+    console.log('❌ No se pudo auto-seleccionar ningún grupo')
+  }
+}
+
 // Métodos
 const handleGroupCode = async () => {
   // Evitar ejecutar múltiples veces
@@ -671,12 +746,28 @@ const handleGroupCode = async () => {
   if(groupCode) {
     groupCodeHandled.value = true
     
+    console.log('🔗 Procesando código de URL:', groupCode)
+    console.log('👥 Grupos cargados:', groups.value.length)
+    console.log('📋 Códigos disponibles:', groups.value.map(g => ({ name: g.name, code: g.inviteCode, id: g.id })))
+    
+    // Si no hay grupos cargados aún, esperar un poco
+    if (groups.value.length === 0) {
+      console.log('⏳ No hay grupos cargados, esperando...')
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      console.log('👥 Grupos después de esperar:', groups.value.length)
+      console.log('📋 Códigos después de esperar:', groups.value.map(g => ({ name: g.name, code: g.inviteCode, id: g.id })))
+    }
+    
     // Buscar el grupo por código de invitación
     const group = groups.value.find(g => g.inviteCode === groupCode)
     if(!group) {
+      console.error('❌ Grupo no encontrado con código:', groupCode)
+      console.error('📋 Códigos actuales:', groups.value.map(g => g.inviteCode))
       addNotification('Este código no existe o ya fue usado. Pide que te envíen un nuevo código de invitación.', 'error')
       return;
     }
+    
+    console.log('✅ Grupo encontrado:', group.name, 'ID:', group.id)
     
     // Verificar si el usuario ya es miembro del grupo
     const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
@@ -715,8 +806,8 @@ const handleGroupCode = async () => {
     })
 
     if(acceptedInvitation) {
-      handleJoinGroup(groupCode);
-      selectedGroup.value = group;
+      await handleJoinGroup(groupCode);
+      // El grupo se seleccionará automáticamente después de unirse exitosamente
     }
     window.history.pushState({}, document.title, "/" + '' );
   }
@@ -1100,9 +1191,22 @@ const closeModal = () => {
 // Métodos de grupos
 // Función para verificar si un nombre de grupo ya existe (sin importar mayúsculas/minúsculas)
 const isGroupNameTaken = (groupName) => {
-  return groups.value.some(group => 
-    group.name.toLowerCase().trim() === groupName.toLowerCase().trim()
-  )
+  if (!groupName || typeof groupName !== 'string') {
+    console.warn('⚠️ isGroupNameTaken: groupName inválido:', groupName)
+    return false
+  }
+  
+  console.log('🔍 Verificando nombre de grupo:', groupName)
+  console.log('📋 Grupos existentes:', groups.value.map(g => ({ name: g?.name, type: typeof g?.name })))
+  
+  return groups.value.some(group => {
+    // Validar que el grupo tenga un nombre válido
+    if (!group || !group.name || typeof group.name !== 'string') {
+      console.warn('⚠️ Grupo con nombre inválido encontrado:', group)
+      return false
+    }
+    return group.name.toLowerCase().trim() === groupName.toLowerCase().trim()
+  })
 }
 
 const handleCreateGroup = async (groupData) => {
@@ -1136,23 +1240,28 @@ const handleCreateGroup = async (groupData) => {
     
     await firestoreService.addGroup(newGroup)
     
+    // Auto-seleccionar el grupo recién creado en todos los casos
+    selectedGroup.value = newGroup
+    console.log('✅ Grupo creado y auto-seleccionado:', newGroup.name)
+    
     // Si estamos creando un grupo para compartir desde "Mis finanzas"
     if (pendingGroupForSharing.value) {
-      selectedGroup.value = newGroup
       showGroupManagementModal.value = false
       pendingGroupForSharing.value = false
       showModal.value = false
       
       handleGenerateInviteCode(newGroup.id, false)
-      addNotification(`Grupo "${newGroup.name}" creado. Ahora puedes compartirlo.`, 'success', 6000)
+      addNotification(`Grupo "${newGroup.name}" creado y seleccionado. Ahora puedes compartirlo.`, 'success', 6000)
       return
     }
     
+    // Cerrar modales si están abiertos
     if (showGroupManagementModal.value && !showModal.value) {
-      selectedGroup.value = newGroup
       showGroupManagementModal.value = false
       showModal.value = false
     }
+    
+    addNotification(`Grupo "${newGroup.name}" creado y seleccionado correctamente`, 'success', 3000)
   } catch (error) {
     console.error('Error creando grupo:', error)
     addNotification('Error creando el grupo', 'error')
@@ -1181,6 +1290,8 @@ const handleJoinGroup = async (inviteCode) => {
   try {
     console.log('🔍 Intentando unirse al grupo con código:', inviteCode)
     console.log('👤 Usuario actual:', currentUser.value?.email, 'ID:', currentUser.value?.id)
+    console.log('🔍 Grupos disponibles:', groups.value.length)
+    console.log('📋 Códigos existentes:', groups.value.map(g => ({ name: g.name, code: g.inviteCode, id: g.id })))
     
     if (!currentUser.value?.id) {
       console.error('❌ Usuario actual no tiene ID válido')
@@ -1198,6 +1309,17 @@ const handleJoinGroup = async (inviteCode) => {
     
     console.log('👥 Grupo encontrado:', group.name, 'ID:', group.id)
     console.log('🧑‍🤝‍🧑 Miembros actuales:', group.members)
+    console.log('📊 Datos del grupo completos:', {
+      id: group.id,
+      name: group.name,
+      createdBy: group.createdBy,
+      inviteCode: group.inviteCode,
+      inviteCodeCreatedAt: group.inviteCodeCreatedAt,
+      inviteCodeUsedCount: group.inviteCodeUsedCount,
+      inviteCodeMaxUses: group.inviteCodeMaxUses,
+      inviteCodeExpiresIn: group.inviteCodeExpiresIn,
+      members: group.members
+    })
     
     // Verificar si ya es miembro antes de hacer otras validaciones
     const isAlreadyMember = group.members.some(m => m.id === currentUser.value.id)
@@ -1235,8 +1357,12 @@ const handleJoinGroup = async (inviteCode) => {
     const originalGroupName = group.name
     const displayName = generateUniqueGroupName(originalGroupName)
     
+    // Asegurar que el ID del usuario sea un número entero
+    const userId = typeof currentUser.value.id === 'string' ? 
+      parseInt(currentUser.value.id) : currentUser.value.id
+    
     const newMember = {
-      id: currentUser.value.id,
+      id: userId,
       username: currentUser.value.username || currentUser.value.email?.split('@')[0],
       role: 'member'
     }
@@ -1247,30 +1373,146 @@ const handleJoinGroup = async (inviteCode) => {
     }
     
     console.log('➕ Agregando nuevo miembro:', newMember)
+    console.log('🔢 ID del usuario:', userId, 'Tipo:', typeof userId)
+    console.log('👤 Usuario actual completo:', {
+      id: currentUser.value.id,
+      email: currentUser.value.email,
+      username: currentUser.value.username
+    })
+    
+    // Construir el grupo actualizado de forma segura
+    const safeMember = {
+      id: userId,
+      username: currentUser.value.username || currentUser.value.email?.split('@')[0],
+      role: 'member'
+    }
+    
+    // Solo agregar displayName si existe y no es undefined
+    if (displayName !== originalGroupName && displayName) {
+      safeMember.displayName = displayName
+    }
+    
+    // Limpiar miembros existentes para asegurar que no tengan campos undefined
+    const cleanExistingMembers = group.members.map(member => {
+      const cleanMember = {
+        id: member.id,
+        username: member.username,
+        role: member.role
+      }
+      
+      // Solo agregar displayName si existe y no es undefined
+      if (member.displayName && member.displayName !== undefined) {
+        cleanMember.displayName = member.displayName
+      }
+      
+      return cleanMember
+    })
     
     const updatedGroup = {
-      ...group,
-      members: [...group.members, newMember],
+      id: group.id,
+      name: group.name,
+      description: group.description || '',
+      createdBy: group.createdBy,
+      createdAt: group.createdAt,
+      members: [...cleanExistingMembers, safeMember],
       inviteCodeUsedCount: usedCount + 1
     }
     
-    // Limpiar campos undefined antes de enviar a Firestore
-    const cleanedGroup = Object.fromEntries(
-      Object.entries(updatedGroup).filter(([_, value]) => value !== undefined)
-    )
-    
-    // Limpiar campos undefined en miembros también
-    if (cleanedGroup.members) {
-      cleanedGroup.members = cleanedGroup.members.map(member => 
-        Object.fromEntries(
-          Object.entries(member).filter(([_, value]) => value !== undefined)
-        )
-      )
+    // Solo agregar campos de invitación si existen y no son undefined
+    if (group.inviteCode) {
+      updatedGroup.inviteCode = group.inviteCode
     }
+    if (group.inviteCodeCreatedAt) {
+      updatedGroup.inviteCodeCreatedAt = group.inviteCodeCreatedAt
+    }
+    if (group.inviteCodeMaxUses !== undefined) {
+      updatedGroup.inviteCodeMaxUses = group.inviteCodeMaxUses
+    }
+    if (group.inviteCodeExpiresIn !== undefined) {
+      updatedGroup.inviteCodeExpiresIn = group.inviteCodeExpiresIn
+    }
+    
+    // Función más robusta para detectar y limpiar campos undefined
+    const findUndefinedFields = (obj, path = '') => {
+      const undefinedFields = []
+      
+      for (const [key, value] of Object.entries(obj)) {
+        const currentPath = path ? `${path}.${key}` : key
+        
+        if (value === undefined) {
+          undefinedFields.push(currentPath)
+        } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+          undefinedFields.push(...findUndefinedFields(value, currentPath))
+        } else if (Array.isArray(value)) {
+          value.forEach((item, index) => {
+            if (item === undefined) {
+              undefinedFields.push(`${currentPath}[${index}]`)
+            } else if (item !== null && typeof item === 'object') {
+              undefinedFields.push(...findUndefinedFields(item, `${currentPath}[${index}]`))
+            }
+          })
+        }
+      }
+      
+      return undefinedFields
+    }
+    
+    // Detectar campos undefined antes de limpiar
+    const undefinedFields = findUndefinedFields(updatedGroup)
+    if (undefinedFields.length > 0) {
+      console.warn('⚠️ Campos undefined detectados:', undefinedFields)
+    }
+    
+    // Limpiar campos undefined de forma recursiva
+    const deepClean = (obj) => {
+      if (obj === null || obj === undefined) return null
+      
+      if (Array.isArray(obj)) {
+        return obj.map(item => deepClean(item)).filter(item => item !== null && item !== undefined)
+      }
+      
+      if (typeof obj === 'object') {
+        const cleaned = {}
+        for (const [key, value] of Object.entries(obj)) {
+          const cleanedValue = deepClean(value)
+          if (cleanedValue !== undefined && cleanedValue !== null) {
+            cleaned[key] = cleanedValue
+          }
+        }
+        return cleaned
+      }
+      
+      return obj
+    }
+    
+    const cleanedGroup = deepClean(updatedGroup)
     
     console.log('💾 Actualizando grupo en Firestore...')
     console.log('🧹 Grupo limpio:', cleanedGroup)
-    await firestoreService.updateGroup(group.id, cleanedGroup)
+    console.log('🔍 Verificando estructura del grupo antes de actualizar:', {
+      hasId: !!group.id,
+      idType: typeof group.id,
+      groupId: group.id,
+      membersCount: cleanedGroup.members?.length,
+      firstMember: cleanedGroup.members?.[0],
+      lastMember: cleanedGroup.members?.[cleanedGroup.members.length - 1]
+    })
+    
+    // Validación final antes de enviar a Firestore
+    const hasUndefined = JSON.stringify(cleanedGroup).includes('undefined')
+    if (hasUndefined) {
+      console.error('🚨 DETECTADO UNDEFINED EN DATOS FINALES')
+      console.error('📋 Datos con undefined:', JSON.stringify(cleanedGroup, null, 2))
+      throw new Error('Datos contienen campos undefined')
+    }
+    
+    try {
+      await firestoreService.updateGroup(group.id, cleanedGroup)
+    } catch (firestoreError) {
+      console.error('❌ Error específico de Firestore:', firestoreError)
+      console.error('📋 Estructura que causó el error:', JSON.stringify(cleanedGroup, null, 2))
+      throw firestoreError
+    }
     console.log('✅ Grupo actualizado exitosamente')
     
     const usesLeft = maxUses - updatedGroup.inviteCodeUsedCount
@@ -1284,6 +1526,10 @@ const handleJoinGroup = async (inviteCode) => {
     } else {
       addNotification(`${joinMessage} Este código ya no puede usarse más.`, 'success')
     }
+    
+    // Seleccionar automáticamente el grupo al que se acaba de unir
+    console.log('🎯 Seleccionando grupo recién unido:', group.name)
+    selectedGroup.value = group
   } catch (error) {
     console.error('❌ Error completo uniéndose al grupo:', error)
     console.error('Stack trace:', error.stack)
@@ -1377,6 +1623,15 @@ const handleGenerateInviteCode = async (groupId, showNotification = true) => {
     const group = groups.value.find(g => g.id === groupId)
     if (!group) return
     
+    // No generar códigos automáticamente para "Mis finanzas"
+    if (group.name === 'Mis finanzas') {
+      console.log('⚠️ No se genera código automático para "Mis finanzas"')
+      if (showNotification) {
+        addNotification('Los códigos de invitación para "Mis finanzas" deben generarse manualmente', 'info')
+      }
+      return
+    }
+    
     const updatedGroup = {
       ...group,
       inviteCode: generateInviteCode(),
@@ -1401,6 +1656,13 @@ const handleGenerateNewCode = async (groupId) => {
   try {
     const group = groups.value.find(g => g.id === groupId)
     if (!group) return
+    
+    // No generar códigos automáticamente para "Mis finanzas"
+    if (group.name === 'Mis finanzas') {
+      console.log('⚠️ No se genera código automático para "Mis finanzas"')
+      addNotification('Los códigos de invitación para "Mis finanzas" deben generarse manualmente', 'info')
+      return
+    }
     
     const updatedGroup = {
       ...group,

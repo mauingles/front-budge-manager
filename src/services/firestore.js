@@ -317,23 +317,38 @@ export const updateGroup = async (groupId, groupData) => {
   try {
     console.log('🔄 Actualizando grupo:', groupId)
     
-    // Limpiar campos undefined de forma recursiva
+    // Limpiar campos undefined de forma recursiva y más agresiva
     const cleanData = (obj) => {
+      if (obj === null || obj === undefined) {
+        return null
+      }
+      
       if (Array.isArray(obj)) {
-        return obj.map(item => cleanData(item))
-      } else if (obj !== null && typeof obj === 'object') {
+        return obj.map(item => cleanData(item)).filter(item => item !== null && item !== undefined)
+      }
+      
+      if (typeof obj === 'object') {
         const cleaned = {}
         for (const [key, value] of Object.entries(obj)) {
-          if (value !== undefined) {
-            cleaned[key] = cleanData(value)
+          const cleanedValue = cleanData(value)
+          if (cleanedValue !== undefined && cleanedValue !== null) {
+            cleaned[key] = cleanedValue
           }
         }
-        return cleaned
+        return Object.keys(cleaned).length > 0 ? cleaned : null
       }
+      
       return obj
     }
     
     const cleanedData = cleanData(groupData)
+    console.log('🧼 Datos originales:', JSON.stringify(groupData, null, 2))
+    console.log('🧹 Datos limpiados:', JSON.stringify(cleanedData, null, 2))
+    
+    if (!cleanedData || Object.keys(cleanedData).length === 0) {
+      console.error('❌ Datos limpiados están vacíos')
+      throw new Error('No hay datos válidos para actualizar')
+    }
     
     const groupRef = doc(db, COLLECTIONS.GROUPS, groupId.toString())
     await updateDoc(groupRef, {

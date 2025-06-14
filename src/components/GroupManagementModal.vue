@@ -97,7 +97,27 @@
 
           <!-- Información del grupo seleccionado -->
           <div v-if="selectedGroupForInvite" class="group-info">
-            <div class="invite-message">
+            
+            <!-- Mensaje para "Mis finanzas" (grupo personal) -->
+            <div v-if="selectedGroupForInvite.name === 'Mis finanzas'" class="personal-group-message">
+              <div class="info-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+              </div>
+              <div class="message-content">
+                <h4>Grupo Personal</h4>
+                <p>
+                  "Mis finanzas" es tu grupo personal y no se puede compartir con otras personas. 
+                  Si quieres colaborar con otros usuarios, crea un nuevo grupo en la pestaña "Crear Grupo".
+                </p>
+              </div>
+            </div>
+            
+            <!-- Controles de invitación para otros grupos -->
+            <div v-else class="invite-message">
               <label>Mensaje de Invitación:</label>
               <div class="invitation-text">
                 Te invito a participar en la app <strong>https://budge-manager.netlify.app</strong> de mi grupo <strong>"{{ selectedGroupForInvite.name }}"</strong>, utilizando este código <span v-if="selectedGroupForInvite.inviteCode" class="code-inline clickable-code" @click="copyCode" title="Copiar código">{{ selectedGroupForInvite.inviteCode }}</span><span v-else class="no-code-inline">sin código activo</span>
@@ -302,7 +322,7 @@ import BaseButton from './BaseButton.vue'
 import { useConfirm } from '@/composables/useConfirm.js'
 import { useNotifications } from '@/composables/useNotifications.js'
 
-const props = defineProps(['show', 'currentUser', 'userGroups', 'allGroups', 'allUsers'])
+const props = defineProps(['show', 'currentUser', 'userGroups', 'allGroups', 'allUsers', 'selectedGroup'])
 const emit = defineEmits(['close', 'create-group', 'join-group', 'remove-member', 'generate-new-code', 'leave-group', 'delete-group', 'hide-group', 'unhide-group'])
 
 // Confirmaciones y notificaciones
@@ -314,14 +334,13 @@ const activeTab = ref('create')
 const newGroupName = ref('')
 const newGroupDescription = ref('')
 const inviteCode = ref('')
-const selectedGroupForInvite = ref('')
 const message = ref('')
 const messageType = ref('success')
 const showMembersModal = ref(false)
 const selectedGroupForMembers = ref(null)
 const groupNameInput = ref(null)
 
-// Computadas
+// Computadas - Definir primero antes de usarlas
 const ownedGroups = computed(() => {
   if (!props.currentUser || !props.userGroups) return []
   
@@ -329,6 +348,76 @@ const ownedGroups = computed(() => {
     const member = group.members.find(m => m.id === props.currentUser.id)
     return member?.role === 'admin' || props.currentUser.role === 'admin' || props.currentUser.role === 'superadmin'
   })
+})
+
+// Función para obtener el grupo por defecto - Definir después de ownedGroups
+const getDefaultGroupForInvite = () => {
+  if (!props.selectedGroup || !props.currentUser) return ''
+  
+  // Buscar el grupo activo en ownedGroups para asegurar la misma referencia
+  const canInvite = ownedGroups.value.find(g => g.id === props.selectedGroup.id)
+  return canInvite || ''
+}
+
+// Inicializar selectedGroupForInvite
+const selectedGroupForInvite = ref(getDefaultGroupForInvite())
+
+// Watchers
+watch([() => props.selectedGroup, () => props.show, ownedGroups], () => {
+  if (props.show && activeTab.value === 'invite') {
+    const defaultGroup = getDefaultGroupForInvite()
+    if (defaultGroup) {
+      // Siempre actualizar si hay un grupo por defecto válido
+      selectedGroupForInvite.value = defaultGroup
+    }
+  }
+}, { immediate: true })
+
+// Watcher específico para cuando cambia el grupo seleccionado
+watch(() => props.selectedGroup, (newSelectedGroup) => {
+  console.log('👀 Grupo seleccionado cambió en GroupManagementModal:', newSelectedGroup?.name)
+  console.log('📋 ownedGroups disponibles:', ownedGroups.value.map(g => g.name))
+  
+  if (newSelectedGroup) {
+    const defaultGroup = getDefaultGroupForInvite()
+    console.log('🎯 Grupo por defecto encontrado:', defaultGroup?.name)
+    
+    if (defaultGroup) {
+      selectedGroupForInvite.value = defaultGroup
+      console.log('✅ selectedGroupForInvite actualizado a:', selectedGroupForInvite.value?.name)
+    }
+  }
+}, { immediate: true })
+
+watch(activeTab, (newTab) => {
+  if (newTab === 'invite') {
+    console.log('📑 Cambiando a tab invite')
+    console.log('🔍 Props selectedGroup:', props.selectedGroup?.name)
+    console.log('📋 ownedGroups:', ownedGroups.value.map(g => g.name))
+    
+    const defaultGroup = getDefaultGroupForInvite()
+    console.log('🎯 Grupo por defecto para invite:', defaultGroup?.name)
+    
+    if (defaultGroup) {
+      selectedGroupForInvite.value = defaultGroup
+      console.log('✅ selectedGroupForInvite actualizado en tab change:', selectedGroupForInvite.value?.name)
+    }
+  }
+})
+
+// Watcher adicional para asegurar que el dropdown se actualice cuando se muestra el modal
+watch(() => props.show, (isShown) => {
+  if (isShown) {
+    // Pequeño delay para asegurar que los datos estén actualizados
+    nextTick(() => {
+      if (activeTab.value === 'invite') {
+        const defaultGroup = getDefaultGroupForInvite()
+        if (defaultGroup) {
+          selectedGroupForInvite.value = defaultGroup
+        }
+      }
+    })
+  }
 })
 
 const visibleGroups = computed(() => {
@@ -381,11 +470,8 @@ const createGroup = () => {
 }
 
 const handleGroupSelection = () => {
-  if (selectedGroupForInvite.value && selectedGroupForInvite.value.name === 'Mis finanzas') {
-    // Mostrar notificación y resetear selección
-    addNotification('Este grupo es solo de uso personal, para compartir debes crear un grupo nuevo.', 'error')
-    selectedGroupForInvite.value = ''
-  }
+  // Permitir selección de cualquier grupo, incluido "Mis finanzas"
+  // La UI condicional se encarga de mostrar el mensaje apropiado
 }
 
 const joinGroup = () => {
@@ -693,7 +779,7 @@ defineExpose({ showMessage })
 <style scoped>
 .group-management {
   width: auto;
-  min-width: 300px;
+  min-width: 400px;
   max-width: 400px;
   max-height: 75vh;
   margin: 0;
@@ -1199,6 +1285,48 @@ h3 {
   font-weight: 600;
 }
 
+/* Estilos para mensaje de grupo personal */
+.personal-group-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.info-icon {
+  width: 24px;
+  height: 24px;
+  color: #64748b;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.info-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.message-content {
+  flex: 1;
+}
+
+.message-content h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.message-content p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+}
 
 @media (max-width: 480px) {
   .group-management {
