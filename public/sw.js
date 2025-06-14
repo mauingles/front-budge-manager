@@ -1,14 +1,15 @@
-const CACHE_NAME = 'budget-manager-v1.0.0'
-const STATIC_CACHE = 'budget-manager-static-v1.0.0'
-const DYNAMIC_CACHE = 'budget-manager-dynamic-v1.0.0'
+const CACHE_NAME = 'budget-manager-v1.0.1'
+const STATIC_CACHE = 'budget-manager-static-v1.0.1'
+const DYNAMIC_CACHE = 'budget-manager-dynamic-v1.0.1'
 
 // Archivos que se cachean en la instalación
 const STATIC_FILES = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/site.webmanifest',
+  '/favicon-96x96.png',
+  '/apple-touch-icon.png',
+  '/favicon.svg'
 ]
 
 // URLs que NO se deben cachear
