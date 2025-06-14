@@ -40,6 +40,7 @@
             <div class="field">
               <label>Nombre del Grupo</label>
               <BaseInput 
+                ref="groupNameInput"
                 v-model="newGroupName" 
                 placeholder="Ej: Familia, Trabajo, Amigos..."
                 required
@@ -294,7 +295,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import BaseModal from './BaseModal.vue'
 import BaseInput from './BaseInput.vue'
 import BaseButton from './BaseButton.vue'
@@ -306,7 +307,7 @@ const emit = defineEmits(['close', 'create-group', 'join-group', 'remove-member'
 
 // Confirmaciones y notificaciones
 const { confirm } = useConfirm()
-const { addNotification } = useNotifications()
+const { addNotification, clearNotificationsByMessage } = useNotifications()
 
 // Estado
 const activeTab = ref('create')
@@ -318,6 +319,7 @@ const message = ref('')
 const messageType = ref('success')
 const showMembersModal = ref(false)
 const selectedGroupForMembers = ref(null)
+const groupNameInput = ref(null)
 
 // Computadas
 const ownedGroups = computed(() => {
@@ -630,6 +632,51 @@ const removeMemberFromDetail = async (groupId, memberId) => {
     showMessage('Error al remover el miembro', 'error')
   }
 }
+
+// Watchers para manejar el foco
+watch(() => props.show, (newShow) => {
+  if (newShow) {
+    // Asegurar que el tab "create" esté activo
+    activeTab.value = 'create'
+    nextTick(() => {
+      // Pequeño delay adicional para asegurar que el modal esté completamente renderizado
+      setTimeout(() => {
+        if (groupNameInput.value?.focus) {
+          groupNameInput.value.focus()
+        }
+      }, 100)
+    })
+  } else {
+    // Limpiar notificaciones cuando se cierra el modal de gestión de grupos (pero no "Mis finanzas")
+    clearNotificationsByMessage('códigos permiten')
+    clearNotificationsByMessage('creado. Ahora puedes')
+  }
+})
+
+watch(activeTab, (newTab) => {
+  if (newTab === 'create' && props.show) {
+    nextTick(() => {
+      setTimeout(() => {
+        if (groupNameInput.value?.focus) {
+          groupNameInput.value.focus()
+        }
+      }, 50)
+    })
+  }
+})
+
+// Watcher para limpiar notificaciones cuando el usuario empieza a escribir
+watch(newGroupName, (newValue, oldValue) => {
+  // Limpiar notificaciones cuando el usuario empiece a escribir (después del primer caracter)
+  if (newValue && newValue.length >= 1 && oldValue !== newValue) {
+    clearNotificationsByMessage('códigos permiten')
+    clearNotificationsByMessage('creado. Ahora puedes')
+    // Solo limpiar "Mis finanzas" si el usuario ya escribió al menos 2 caracteres (está realmente creando)
+    if (newValue.length >= 2) {
+      clearNotificationsByMessage('Mis finanzas')
+    }
+  }
+})
 
 // Exponer método para mostrar mensajes desde el componente padre
 defineExpose({ showMessage })

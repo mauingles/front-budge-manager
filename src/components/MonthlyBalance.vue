@@ -9,6 +9,9 @@
               :available-groups="availableGroups"
               :current-user="currentUser"
               @update:modelValue="handleGroupChange"
+              @generate-invite-code="$emit('generate-invite-code', $event)"
+              @create-group="$emit('create-group')"
+              @create-group-for-sharing="$emit('create-group-for-sharing')"
             />
           </div>
         </div>
@@ -86,7 +89,7 @@ import { computed, ref, watch } from 'vue'
 import GroupSelectorModal from './GroupSelectorModal.vue'
 
 const props = defineProps(['totalIncome', 'totalExpenses', 'selectedMonth', 'selectedGroup', 'availableGroups', 'currentUser'])
-const emit = defineEmits(['update:selectedGroup'])
+const emit = defineEmits(['update:selectedGroup', 'generate-invite-code', 'create-group', 'create-group-for-sharing'])
 
 // Estado interno para el grupo seleccionado
 const internalSelectedGroup = ref(props.selectedGroup)
@@ -128,6 +131,45 @@ const incomePercentage = computed(() =>
 const expensePercentage = computed(() => 
   Math.round((props.totalExpenses / totalAmount.value) * 100)
 )
+
+// Función para verificar si se puede compartir el grupo
+const canShareGroup = (group) => {
+  if (!group || !props.currentUser) return false
+  
+  // No se puede compartir el grupo "Mis finanzas"
+  if (group.name === 'Mis finanzas') return false
+  
+  // Solo el admin del grupo puede compartir
+  const member = group.members?.find(m => m.id === props.currentUser.id)
+  return member?.role === 'admin' || props.currentUser.role === 'admin' || props.currentUser.role === 'superadmin'
+}
+
+// Función para compartir en WhatsApp
+const shareOnWhatsApp = () => {
+  if (!internalSelectedGroup.value) return
+  
+  // Si no tiene código de invitación, generar uno nuevo
+  if (!internalSelectedGroup.value.inviteCode) {
+    emit('generate-invite-code', internalSelectedGroup.value.id)
+    // Esperar un momento para que se genere el código
+    setTimeout(() => {
+      openWhatsApp()
+    }, 100)
+  } else {
+    openWhatsApp()
+  }
+}
+
+const openWhatsApp = () => {
+  const group = internalSelectedGroup.value
+  if (!group || !group.inviteCode) return
+  
+  const message = `Te invito a participar en la app https://budge-manager.netlify.app?groupCode=${group.inviteCode} de mi grupo "${group.name}"`
+  const encodedMessage = encodeURIComponent(message)
+  const whatsappUrl = `https://wa.me/?text=${encodedMessage}`
+  
+  window.open(whatsappUrl, '_blank')
+}
 
 // Para mostrar el saldo/diferencia
 const balanceDisplay = computed(() => {
@@ -195,9 +237,43 @@ const saldoClass = computed(() => {
 
 .month-row, .group-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 16px;
   width: 100%;
+}
+
+.group-row > * {
+  flex: 1;
+}
+
+.btn-whatsapp {
+  background: #25d366;
+  color: white;
+  border-color: #25d366;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  height: auto;
+  min-height: auto;
+  border-radius: var(--border-radius-md);
+  border: 1px solid;
+  cursor: pointer;
+  transition: var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100% !important;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-whatsapp:hover {
+  background: #128c7e;
+  border-color: #128c7e;
 }
 
 .month-info h2 {

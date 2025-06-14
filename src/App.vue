@@ -67,7 +67,10 @@
           :selected-group="selectedGroup"
           :available-groups="userGroups"
           :current-user="currentUser"
-          @update:selectedGroup="handleGroupChange" />
+          @update:selectedGroup="handleGroupChange"
+          @generate-invite-code="handleGenerateInviteCode"
+          @create-group="openGroupManagement"
+          @create-group-for-sharing="handleCreateGroupForSharing" />
         
         <BaseCard>
           <h3>
@@ -93,7 +96,6 @@
     </div>
     
     <BaseModal :show="showModal" @close="closeModal">
-      <h2>{{ getModalTitle() }}</h2>
       <TransactionForm 
         :initial-type="formType"
         :selected-month="selectedMonth"
@@ -218,6 +220,7 @@ const showUserModal = ref(false)
 const showGroupModal = ref(false)
 const showGroupManagementModal = ref(false)
 const formType = ref('income')
+const pendingGroupForSharing = ref(false)
 
 // Computadas
 const filteredTransactions = computed(() => {
@@ -527,7 +530,7 @@ const handleGroupCode = async () => {
   if(groupCode) {
     const group = groups.value.find(g => g.inviteCode === groupCode)
     if(!group) {
-      addNotification('Código de invitación inválido o ya fue usado', 'error')
+      addNotification('Este código ha caducado o ya fue usado. Pide que te envíen un nuevo código de invitación.', 'error')
       return;
     };
     const admin = group.members.find(m => m.role === 'admin');
@@ -554,6 +557,11 @@ const openForm = (type) => {
 const openGroupManagement = () => {
   showUserModal.value = false // Cerrar el modal de usuario
   showGroupManagementModal.value = true // Abrir gestión de grupos
+}
+
+const handleCreateGroupForSharing = () => {
+  pendingGroupForSharing.value = true
+  showGroupManagementModal.value = true
 }
 
 const handleCreateGroupFromTransaction = () => {
@@ -595,7 +603,7 @@ const getModalTitle = () => {
   if (editing.value) {
     return editingTransaction.value?.type === 'income' ? 'Editar Ingreso' : 'Editar Gasto'
   }
-  return formType.value === 'income' ? 'Nuevo Ingreso' : 'Nuevo Gasto'
+  return formType.value === 'income' ? 'Categoría' : 'Categoría'
 }
 
 const getTransactionsSectionTitle = () => {
@@ -870,6 +878,7 @@ const closeModal = () => {
 
 // Métodos de grupos
 const handleCreateGroup = (groupData) => {
+  
   const newGroup = {
     id: Date.now(),
     name: groupData.name,
@@ -877,6 +886,10 @@ const handleCreateGroup = (groupData) => {
     createdBy: currentUser.value.id,
     createdAt: new Date().toISOString(),
     inviteCode: generateInviteCode(),
+    inviteCodeCreatedAt: new Date().toISOString(),
+    inviteCodeUsedCount: 0,
+    inviteCodeMaxUses: 10,
+    inviteCodeExpiresIn: 6, // horas
     members: [
       {
         id: currentUser.value.id,
@@ -887,6 +900,23 @@ const handleCreateGroup = (groupData) => {
   }
   
   groups.value.push(newGroup)
+  
+  // Si estamos creando un grupo para compartir desde "Mis finanzas"
+  if (pendingGroupForSharing.value) {
+    selectedGroup.value = newGroup
+    showGroupManagementModal.value = false
+    pendingGroupForSharing.value = false
+    
+    // Asegurar que no se abra ningún modal
+    showModal.value = false
+    
+    // Generar código de invitación inmediatamente (sin notificación)
+    handleGenerateInviteCode(newGroup.id, false)
+    
+    // Mostrar notificación de éxito
+    addNotification(`Grupo "${newGroup.name}" creado. Ahora puedes compartirlo.`, 'success', 6000)
+    return
+  }
   
   // If we were in the transaction modal, select the new group and reopen the modal
   if (showGroupManagementModal.value && !showModal.value) {
@@ -899,9 +929,27 @@ const handleCreateGroup = (groupData) => {
 
 const handleJoinGroup = (inviteCode) => {
   const group = groups.value.find(g => g.inviteCode === inviteCode)
-  console.log('eze', groups)
+  
   if (!group) {
-    addNotification('Código de invitación inválido o ya fue usado', 'error')
+    addNotification('Código de invitación inválido o expirado', 'error')
+    return
+  }
+  
+  // Verificar si el código ha expirado (24 horas)
+  if (group.inviteCodeCreatedAt) {
+    const createdAt = new Date(group.inviteCodeCreatedAt)
+    const now = new Date()
+    const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
+    
+    if (hoursDiff > (group.inviteCodeExpiresIn || 6)) {
+      addNotification('Este código ha caducado. Pide que te envíen un nuevo código de invitación.', 'error')
+      return
+    }
+  }
+  
+  // Verificar si se ha alcanzado el límite de usos
+  if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 10)) {
+    addNotification('Este código ya fue usado el máximo de veces. Pide que te envíen un nuevo código de invitación.', 'error')
     return
   }
   
@@ -918,11 +966,17 @@ const handleJoinGroup = (inviteCode) => {
     role: 'member'
   })
   
-  // INVALIDAR el código después del uso (un solo uso)
-  group.inviteCode = null
+  // Incrementar contador de usos
+  group.inviteCodeUsedCount = (group.inviteCodeUsedCount || 0) + 1
   
+  // Calcular usos restantes
+  const usesLeft = (group.inviteCodeMaxUses || 10) - group.inviteCodeUsedCount
   
-  addNotification(`¡Te has unido al grupo "${group.name}"! El código de invitación ha sido invalidado.`, 'success')
+  if (usesLeft > 0) {
+    addNotification(`¡Te has unido al grupo "${group.name}"! Quedan ${usesLeft} usos del código.`, 'success')
+  } else {
+    addNotification(`¡Te has unido al grupo "${group.name}"! Este código ya no puede usarse más.`, 'success')
+  }
 }
 
 const handleRemoveMember = ({ groupId, memberId }) => {
@@ -971,13 +1025,33 @@ const createDefaultGroup = (user) => {
   return defaultGroup
 }
 
+const handleGenerateInviteCode = (groupId, showNotification = true) => {
+  const group = groups.value.find(g => g.id === groupId)
+  if (!group) return
+  
+  // Generar nuevo código con información de límites
+  group.inviteCode = generateInviteCode()
+  group.inviteCodeCreatedAt = new Date().toISOString()
+  group.inviteCodeUsedCount = 0
+  group.inviteCodeMaxUses = 10
+  group.inviteCodeExpiresIn = 6
+  
+  // Solo mostrar notificación si se solicita explícitamente
+  if (showNotification) {
+    addNotification('Nuevo código generado (10 usos, válido 6h)', 'success', 5000)
+  }
+}
+
 const handleGenerateNewCode = (groupId) => {
   const group = groups.value.find(g => g.id === groupId)
   if (!group) return
   
-  // Generar nuevo código
+  // Generar nuevo código con información de límites
   group.inviteCode = generateInviteCode()
-  
+  group.inviteCodeCreatedAt = new Date().toISOString()
+  group.inviteCodeUsedCount = 0
+  group.inviteCodeMaxUses = 10
+  group.inviteCodeExpiresIn = 6
 }
 
 const handleLeaveGroup = (groupId) => {

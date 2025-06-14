@@ -1,5 +1,5 @@
 <template>
-  <div :class="['transaction', { 'expanded': isExpanded }]" @click="toggleExpand">
+  <div ref="transactionRef" :class="['transaction', { 'expanded': isExpanded }]" @click="toggleExpand">
     <!-- Vista compacta para móvil -->
     <div class="mobile-compact" v-if="isMobile && !isExpanded">
       <div class="compact-info">
@@ -36,12 +36,6 @@
       </div>
     </div>
     
-    <!-- Indicador de expansión en móvil -->
-    <div v-if="isMobile" class="expand-indicator" @click.stop="toggleExpand">
-      <svg :class="{ 'rotated': isExpanded }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="6,9 12,15 18,9"/>
-      </svg>
-    </div>
   </div>
 </template>
 
@@ -52,6 +46,8 @@ const props = defineProps(['description', 'amount', 'type', 'user', 'date', 'can
 
 const isExpanded = ref(false)
 const windowWidth = ref(window.innerWidth)
+const transactionRef = ref(null)
+let scrollContainer = null
 
 // Detectar si está en móvil
 const isMobile = computed(() => windowWidth.value <= 768)
@@ -102,12 +98,45 @@ const formatCompactDate = (dateString) => {
   return formatDate(dateString)
 }
 
+// Función para manejar el scroll
+const handleScroll = () => {
+  if (isExpanded.value && isMobile.value) {
+    isExpanded.value = false
+  }
+}
+
+// Función para encontrar el contenedor de scroll más cercano
+const findScrollContainer = (element) => {
+  let parent = element.parentElement
+  while (parent) {
+    const style = window.getComputedStyle(parent)
+    if (style.overflowY === 'auto' || style.overflowY === 'scroll' || parent.classList.contains('list')) {
+      return parent
+    }
+    parent = parent.parentElement
+  }
+  return window
+}
+
 onMounted(() => {
   window.addEventListener('resize', updateWindowWidth)
+  
+  // Agregar listener para scroll en el contenedor padre de scroll
+  if (transactionRef.value) {
+    scrollContainer = findScrollContainer(transactionRef.value)
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
+    }
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateWindowWidth)
+  
+  // Remover listener de scroll
+  if (scrollContainer) {
+    scrollContainer.removeEventListener('scroll', handleScroll)
+  }
 })
 
 defineEmits(['delete', 'edit'])
@@ -120,8 +149,9 @@ defineEmits(['delete', 'edit'])
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-md);
-  transition: var(--transition-base);
+  transition: all 0.3s ease;
   position: relative;
+  overflow: hidden;
 }
 
 /* Desktop - no cursor pointer por defecto */
@@ -147,6 +177,7 @@ defineEmits(['delete', 'edit'])
 .transaction.expanded {
   border-color: var(--border-hover);
   box-shadow: var(--shadow-md);
+  transform: scale(1.02);
 }
 
 /* Vista completa (desktop y móvil expandido) */
@@ -155,6 +186,18 @@ defineEmits(['delete', 'edit'])
   justify-content: space-between;
   align-items: flex-start;
   width: 100%;
+  animation: fadeInExpand 0.3s ease-out;
+}
+
+@keyframes fadeInExpand {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Vista compacta para móvil */
@@ -163,7 +206,35 @@ defineEmits(['delete', 'edit'])
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding-right: 30px; /* Espacio para el indicador */
+  position: relative;
+}
+
+.mobile-compact::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #3b82f6 50%, transparent 100%);
+  opacity: 0.4;
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.4; transform: translateX(-15px); }
+  50% { opacity: 0.7; transform: translateX(15px); }
+}
+
+@keyframes subtlePulse {
+  0%, 100% { 
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: transparent;
+  }
+  50% { 
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.1);
+  }
 }
 
 .compact-info {
@@ -198,41 +269,31 @@ defineEmits(['delete', 'edit'])
   color: var(--color-danger);
 }
 
-/* Indicador de expansión */
-.expand-indicator {
-  position: absolute;
-  right: 12px;
-  top: 25px;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.expand-indicator:hover {
-  color: var(--text-primary);
-}
-
-.expand-indicator svg {
-  width: 100%;
-  height: 100%;
-  transition: transform 0.2s ease;
-}
-
-.expand-indicator svg.rotated {
-  transform: rotate(180deg);
-}
 
 @media (max-width: 768px) {
   .transaction {
     padding: 12px;
     cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+    background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
+                linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.2) 50%, transparent 100%) border-box;
   }
   
-  .mobile-compact {
-    padding-right: 30px;
+  .transaction:not(.expanded) {
+    animation: subtlePulse 3s ease-in-out infinite;
+  }
+  
+  .transaction:hover:not(.expanded) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    animation: none;
+  }
+  
+  .transaction:active:not(.expanded) {
+    transform: translateY(-1px) scale(0.98);
+    transition: all 0.1s ease;
   }
   
   .compact-user {

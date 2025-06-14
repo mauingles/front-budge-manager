@@ -35,10 +35,20 @@ export function useNotifications() {
     notifications.value = []
   }
   
+  const clearNotificationsByType = (type) => {
+    notifications.value = notifications.value.filter(n => n.type !== type)
+  }
+  
+  const clearNotificationsByMessage = (messagePattern) => {
+    notifications.value = notifications.value.filter(n => !n.message.includes(messagePattern))
+  }
+  
   return {
     notifications,
     addNotification,
     removeNotification,
-    clearNotifications
+    clearNotifications,
+    clearNotificationsByType,
+    clearNotificationsByMessage
   }
 }

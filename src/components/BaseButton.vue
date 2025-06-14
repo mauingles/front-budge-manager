@@ -26,4 +26,16 @@ defineEmits(['click'])
   min-width: 200px;
   margin-inline: auto;
 }
+
+/* Estilo activo para botones secundarios */
+.btn-base.btn-secondary:not(.btn-disabled) {
+  background: #374151;
+  color: white;
+  border-color: #374151;
+}
+
+.btn-base.btn-secondary:not(.btn-disabled):hover {
+  background: #1f2937;
+  border-color: #1f2937;
+}
 </style>

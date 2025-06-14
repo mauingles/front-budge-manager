@@ -1,19 +1,55 @@
 <template>
   <div class="group-selector-modal">
-    <button @click="showModal = true" class="btn btn-group">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
-        <path d="M12 1v22"/>
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-      </svg>
-     {{ selectedGroupName }}
-    </button>
+    <div class="selector-container">
+      <button @click="showModal = true" class="btn btn-group">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
+          <path d="M12 1v22"/>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+       {{ selectedGroupName }}
+      </button>
+      <button 
+        v-if="modelValue && shouldShowWhatsAppButton(modelValue)"
+        @click="shareOnWhatsApp" 
+        class="btn btn-share-mini"
+        title="Compartir grupo"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 10px; height: 10px;">
+          <path d="M2 21L23 12L2 3L2 10L17 12L2 14L2 21Z"/>
+        </svg>
+      </button>
+    </div>
     
     <!-- Modal compacto usando BaseModal -->
     <BaseModal :show="showModal" @close="closeModal">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Grupos</h3>
-          <p class="modal-subtitle">Selecciona un grupo para filtrar las transacciones</p>
+          <h3>Selecciona el grupo activo</h3>
+          <div class="action-buttons">
+            <button 
+              v-if="modelValue && shouldShowWhatsAppButton(modelValue)"
+              @click="shareOnWhatsApp" 
+              class="btn btn-whatsapp-small"
+              title="Compartir grupo en WhatsApp"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px;">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.893 3.386"/>
+              </svg>
+              Compartir grupo {{ getActiveGroupName() }}
+            </button>
+            <button 
+              @click="createNewGroup" 
+              class="btn btn-create-group"
+              title="Crear un nuevo grupo"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+              </svg>
+              Crear grupo nuevo
+            </button>
+          </div>
         </div>
         
         <div class="groups-list">
@@ -74,10 +110,12 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import BaseModal from './BaseModal.vue'
+import { useNotifications } from '@/composables/useNotifications.js'
 
 const props = defineProps(['modelValue', 'availableGroups', 'currentUser'])
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'generate-invite-code', 'create-group', 'create-group-for-sharing'])
 
+const { addNotification, clearNotificationsByMessage } = useNotifications()
 const showModal = ref(false)
 const selectedGroup = ref(props.modelValue)
 
@@ -105,6 +143,142 @@ const selectGroup = (group) => {
 
 const closeModal = () => {
   showModal.value = false
+  // Limpiar notificaciones relacionadas con grupos cuando se cierra el modal
+  clearNotificationsByMessage('Mis finanzas')
+  clearNotificationsByMessage('códigos permiten')
+  clearNotificationsByMessage('Enlace compartido')
+}
+
+// Función para verificar si se puede compartir el grupo
+const canShareGroup = (group) => {
+  if (!group || !props.currentUser) return false
+  
+  // No se puede compartir el grupo "Mis finanzas"
+  if (group.name === 'Mis finanzas') return false
+  
+  // Solo el admin del grupo puede compartir
+  const member = group.members?.find(m => m.id === props.currentUser.id)
+  return member?.role === 'admin' || props.currentUser.role === 'admin' || props.currentUser.role === 'superadmin'
+}
+
+// Función para verificar si se debe mostrar el botón de WhatsApp
+const shouldShowWhatsAppButton = (group) => {
+  if (!group || !props.currentUser) return false
+  
+  // Mostrar para "Mis finanzas" y para grupos compartibles
+  if (group.name === 'Mis finanzas') {
+    return true
+  }
+  
+  // Para otros grupos, verificar permisos normalmente
+  return canShareGroup(group)
+}
+
+// Función para compartir en WhatsApp
+const shareOnWhatsApp = () => {
+  if (!props.modelValue) return
+  
+  const group = props.modelValue
+  
+  // Manejar grupo "Mis finanzas" de manera especial
+  if (group.name === 'Mis finanzas') {
+    // Abrir el modal de crear grupo para compartir
+    closeModal()
+    emit('create-group-for-sharing')
+    // Mostrar la notificación después de un pequeño delay para asegurar que se vea
+    setTimeout(() => {
+      addNotification('"Mis finanzas" es personal. Te recomendamos crear un nuevo grupo para compartir.', 'info', 4000)
+    }, 100)
+    return
+  }
+  
+  // Verificar si el código ha expirado o alcanzó el límite
+  if (group.inviteCode) {
+    // Verificar expiración
+    if (group.inviteCodeCreatedAt) {
+      const createdAt = new Date(group.inviteCodeCreatedAt)
+      const now = new Date()
+      const hoursDiff = (now - createdAt) / (1000 * 60 * 60)
+      
+      if (hoursDiff > (group.inviteCodeExpiresIn || 6)) {
+        // Código expirado, generar uno nuevo
+        emit('generate-invite-code', group.id)
+        setTimeout(() => {
+          showLimitNotification()
+          openWhatsApp()
+        }, 100)
+        return
+      }
+    }
+    
+    // Verificar límite de usos
+    if ((group.inviteCodeUsedCount || 0) >= (group.inviteCodeMaxUses || 10)) {
+      // Límite alcanzado, generar uno nuevo
+      emit('generate-invite-code', group.id)
+      setTimeout(() => {
+        showLimitNotification()
+        openWhatsApp()
+      }, 100)
+      return
+    }
+  }
+  
+  // Generar código si no existe
+  if (!group.inviteCode) {
+    emit('generate-invite-code', group.id)
+    setTimeout(() => {
+      showLimitNotification()
+      openWhatsApp()
+    }, 1000)
+  } else {
+    setTimeout(() => {
+      showLimitNotification()
+      openWhatsApp()
+    }, 1000)
+  }
+}
+
+// Función para mostrar notificación sobre límites
+const showLimitNotification = () => {
+  const group = props.modelValue
+  const usesLeft = (group.inviteCodeMaxUses || 10) - (group.inviteCodeUsedCount || 0)
+  
+  // Calcular tiempo restante
+  let timeLeft = ''
+  if (group.inviteCodeCreatedAt) {
+    const createdAt = new Date(group.inviteCodeCreatedAt)
+    const expiresAt = new Date(createdAt.getTime() + (group.inviteCodeExpiresIn || 6) * 60 * 60 * 1000)
+    const now = new Date()
+    const hoursLeft = Math.max(0, Math.ceil((expiresAt - now) / (1000 * 60 * 60)))
+    timeLeft = hoursLeft > 0 ? ` (${hoursLeft}h restantes)` : ''
+  }
+  
+  addNotification(`Enlace compartido: ${usesLeft} usos disponibles${timeLeft}`, 'info', 6000)
+}
+
+const openWhatsApp = () => {
+  const group = props.modelValue
+  if (!group || !group.inviteCode) return
+  
+  const message = `Te invito a participar en la app https://budge-manager.netlify.app?groupCode=${group.inviteCode} de mi grupo "${group.name}"`
+  const encodedMessage = encodeURIComponent(message)
+  const whatsappUrl = `https://wa.me/?text=${encodedMessage}`
+  
+  window.open(whatsappUrl, '_blank')
+}
+
+// Función para crear nuevo grupo
+const createNewGroup = () => {
+  closeModal()
+  emit('create-group-for-sharing')
+}
+
+// Función para obtener el nombre del grupo activo
+const getActiveGroupName = () => {
+  if (!props.modelValue) {
+    return 'Ninguno'
+  }
+  return props.modelValue.name
 }
 </script>
 
@@ -116,11 +290,17 @@ const closeModal = () => {
   min-width: 0;
 }
 
+.selector-container {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  align-items: stretch;
+}
+
 .btn-group {
   border-color: #6b7280;
   background: #f3f4f6;
   color: #374151;
-  width: 100% !important;
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
@@ -147,7 +327,19 @@ const closeModal = () => {
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
 }
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
 
 .modal-header h3 {
   margin: 0 0 4px 0;
@@ -262,6 +454,73 @@ const closeModal = () => {
   height: 8px;
 }
 
+.btn-whatsapp-small {
+  background: #25d366;
+  color: white;
+  border: 1px solid #25d366;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-whatsapp-small:hover {
+  background: #128c7e;
+  border-color: #128c7e;
+}
+
+.btn-create-group {
+  background: #3b82f6;
+  color: white;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-create-group:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.btn-share-mini {
+  background: #25d366;
+  color: white;
+  border: 1px solid #25d366;
+  border-radius: 4px;
+  padding: 2px;
+  width: 18px;
+  height: 36px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.btn-share-mini:hover {
+  background: #128c7e;
+  border-color: #128c7e;
+  transform: scale(1.05);
+}
+
 @media (max-width: 480px) {
   .btn-group {
     font-size: 11px !important;
@@ -326,6 +585,17 @@ const closeModal = () => {
   .check-icon svg {
     width: 10px;
     height: 10px;
+  }
+  
+  .btn-share-mini {
+    width: 16px;
+    height: 32px;
+    padding: 1px;
+  }
+  
+  .btn-share-mini svg {
+    width: 8px !important;
+    height: 8px !important;
   }
 }
 </style>

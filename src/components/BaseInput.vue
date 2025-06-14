@@ -1,5 +1,6 @@
 <template>
   <input 
+    ref="inputRef"
     class="input-base" 
     :type="type"
     :placeholder="placeholder"
@@ -10,6 +11,8 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
+
 defineProps({
   type: {
     type: String,
@@ -24,6 +27,16 @@ defineProps({
 })
 
 defineEmits(['update:modelValue'])
+
+const inputRef = ref(null)
+
+const focus = () => {
+  if (inputRef.value) {
+    inputRef.value.focus()
+  }
+}
+
+defineExpose({ focus })
 </script>
 
 <style scoped>

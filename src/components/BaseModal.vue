@@ -39,7 +39,7 @@ defineEmits(['close'])
 .modal-dialog {
   background: #ffffff;
   border-radius: 8px;
-  padding: 24px 32px 24px 32px;
+  padding: 16px 20px 16px 20px;
   max-width: 90vw;
   max-height: 90vh;
   overflow-y: auto;
