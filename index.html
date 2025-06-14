@@ -12,24 +12,52 @@
     <meta name="orientation" content="portrait-primary">
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Gestiona tus presupuestos personales y grupales con colaboración en tiempo real. Registra ingresos, gastos y comparte grupos con amigos y familia.">
-    <meta name="keywords" content="presupuesto, finanzas, gastos, ingresos, dinero, colaboración, grupos, PWA">
+    <meta name="description" content="🏦 Gestiona tus finanzas de forma inteligente y colaborativa. Registra ingresos y gastos, comparte presupuestos con grupos, y mantén el control total de tu dinero en tiempo real.">
+    <meta name="keywords" content="presupuesto, finanzas personales, gastos, ingresos, dinero, colaboración, grupos, PWA, gestión financiera, control gastos, aplicación finanzas">
     <meta name="author" content="Budget Manager">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Spanish">
     
-    <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Budget Manager - Gestor de Presupuestos">
-    <meta property="og:description" content="Gestiona tus presupuestos personales y grupales con colaboración en tiempo real">
+    <!-- Open Graph Meta Tags para WhatsApp, Facebook, LinkedIn -->
+    <meta property="og:title" content="💰 Budget Manager - Tu Gestor de Finanzas Inteligente">
+    <meta property="og:description" content="🏦 Controla tus finanzas como un profesional: registra ingresos y gastos, colabora con grupos, y accede desde cualquier dispositivo. ¡Gratis y fácil de usar!">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://budge-manager.netlify.app">
-    <meta property="og:image" content="/icons/icon-512x512.png">
+    <meta property="og:image" content="https://budge-manager.netlify.app/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Budget Manager - Aplicación de gestión financiera colaborativa">
     <meta property="og:site_name" content="Budget Manager">
     <meta property="og:locale" content="es_ES">
+    <meta property="article:author" content="Budget Manager Team">
     
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Budget Manager - Gestor de Presupuestos">
-    <meta name="twitter:description" content="Gestiona tus presupuestos personales y grupales con colaboración en tiempo real">
-    <meta name="twitter:image" content="/icons/icon-512x512.png">
+    <meta name="twitter:site" content="@BudgetManager">
+    <meta name="twitter:creator" content="@BudgetManager">
+    <meta name="twitter:title" content="💰 Budget Manager - Tu Gestor de Finanzas Inteligente">
+    <meta name="twitter:description" content="🏦 Controla tus finanzas como un profesional: registra ingresos y gastos, colabora con grupos, y accede desde cualquier dispositivo. ¡Gratis y fácil de usar!">
+    <meta name="twitter:image" content="https://budge-manager.netlify.app/og-image.png">
+    <meta name="twitter:image:alt" content="Budget Manager - Aplicación de gestión financiera colaborativa">
+    
+    <!-- WhatsApp specific (uses Open Graph) -->
+    <meta property="og:image:type" content="image/png">
+    
+    <!-- Telegram Meta Tags -->
+    <meta name="telegram:channel" content="@BudgetManager">
+    
+    <!-- Additional Social Meta Tags -->
+    <meta property="fb:app_id" content="your-facebook-app-id">
+    <meta name="pinterest-rich-pin" content="true">
+    
+    <!-- Geo Tags -->
+    <meta name="geo.region" content="ES">
+    <meta name="geo.placename" content="España">
+    <meta name="ICBM" content="40.4165, -3.70256">
+    
+    <!-- App Store / Play Store -->
+    <meta name="apple-itunes-app" content="app-id=Budget-Manager">
+    <meta name="google-play-app" content="app-id=com.budgetmanager.app">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
@@ -53,7 +81,45 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png">
     <link rel="shortcut icon" href="/favicon.ico">
     
-    <title>Budget Manager - Gestor de Presupuestos</title>
+    <title>💰 Budget Manager - Tu Gestor de Finanzas Inteligente | Controla tus Gastos e Ingresos</title>
+    
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Budget Manager",
+      "description": "Gestiona tus finanzas de forma inteligente y colaborativa. Registra ingresos y gastos, comparte presupuestos con grupos, y mantén el control total de tu dinero en tiempo real.",
+      "url": "https://budge-manager.netlify.app",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Web, iOS, Android",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Budget Manager Team"
+      },
+      "screenshot": "https://budge-manager.netlify.app/og-image.png",
+      "featureList": [
+        "Registro de ingresos y gastos",
+        "Colaboración en grupos",
+        "Sincronización en tiempo real",
+        "Aplicación web progresiva (PWA)",
+        "Funcionalidad offline",
+        "Compatible con móviles y escritorio"
+      ],
+      "requirements": "Navegador web moderno",
+      "softwareVersion": "1.0.0",
+      "releaseNotes": "Primera versión con funcionalidades completas de gestión financiera colaborativa",
+      "downloadUrl": "https://budge-manager.netlify.app",
+      "installUrl": "https://budge-manager.netlify.app",
+      "browserRequirements": "Requires JavaScript",
+      "permissions": "No permissions required"
+    }
+    </script>
   </head>
   <body>
     <div id="app"></div>

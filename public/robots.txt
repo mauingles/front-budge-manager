@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://budge-manager.netlify.app/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1
+
+# Specific directives
+Allow: /icons/
+Allow: /screenshots/
+Allow: /manifest.json
+Allow: /og-image.png
+
+# Disallow admin or sensitive areas (none in this case)
+# Disallow: /admin/
+
+# Cache policy
+Cache-control: public, max-age=86400
