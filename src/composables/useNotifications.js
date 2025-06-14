@@ -3,7 +3,7 @@ import { ref } from 'vue'
 const notifications = ref([])
 
 export function useNotifications() {
-  const addNotification = (message, type = 'info', duration = 5000) => {
+  const addNotification = (message, type = 'info', duration = 5000, callback = null) => {
     // Evitar duplicados de la misma notificación
     const isDuplicate = notifications.value.some(n => 
       n.message === message && n.type === type
@@ -18,7 +18,9 @@ export function useNotifications() {
       id,
       message,
       type, // 'success', 'error', 'warning', 'info'
-      duration
+      duration,
+      callback, // Función a ejecutar cuando se hace clic
+      clickable: callback !== null // Indica si es clickeable
     }
     
     notifications.value.push(notification)

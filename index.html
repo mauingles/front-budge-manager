@@ -1,13 +1,78 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="es">
   <head>
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Budget Manager</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="background-color" content="#ffffff">
+    <meta name="display" content="standalone">
+    <meta name="orientation" content="portrait-primary">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Gestiona tus presupuestos personales y grupales con colaboración en tiempo real. Registra ingresos, gastos y comparte grupos con amigos y familia.">
+    <meta name="keywords" content="presupuesto, finanzas, gastos, ingresos, dinero, colaboración, grupos, PWA">
+    <meta name="author" content="Budget Manager">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Budget Manager - Gestor de Presupuestos">
+    <meta property="og:description" content="Gestiona tus presupuestos personales y grupales con colaboración en tiempo real">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://budge-manager.netlify.app">
+    <meta property="og:image" content="/icons/icon-512x512.png">
+    <meta property="og:site_name" content="Budget Manager">
+    <meta property="og:locale" content="es_ES">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Budget Manager - Gestor de Presupuestos">
+    <meta name="twitter:description" content="Gestiona tus presupuestos personales y grupales con colaboración en tiempo real">
+    <meta name="twitter:image" content="/icons/icon-512x512.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Apple-specific meta tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Budget Manager">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png">
+    
+    <!-- Microsoft-specific meta tags -->
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
+    <meta name="msapplication-TileColor" content="#3b82f6">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    
+    <!-- Additional PWA Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    
+    <title>Budget Manager - Gestor de Presupuestos</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
+    
+    <!-- PWA Install Script -->
+    <script>
+      // Registrar Service Worker de forma inmediata
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('✅ SW registrado:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('❌ SW falló:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

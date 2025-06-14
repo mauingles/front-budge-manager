@@ -4,17 +4,19 @@
       <div
         v-for="notification in notifications"
         :key="notification.id"
-        :class="['notification', `notification-${notification.type}`]"
+        :class="['notification', `notification-${notification.type}`, { 'notification-clickable': notification.clickable }]"
+        @click="handleNotificationClick(notification)"
       >
-      <div class="notification-content">
-        <span class="notification-message">{{ notification.message }}</span>
-      </div>
-      <button @click="removeNotification(notification.id)" class="notification-close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 6L6 18"/>
-          <path d="M6 6l12 12"/>
-        </svg>
-      </button>
+        <div class="notification-content">
+          <span class="notification-message">{{ notification.message }}</span>
+          <span v-if="notification.clickable" class="notification-click-hint">👆</span>
+        </div>
+        <button @click.stop="removeNotification(notification.id)" class="notification-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18"/>
+            <path d="M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
     </div>
   </Teleport>
@@ -24,6 +26,13 @@
 import { useNotifications } from '@/composables/useNotifications.js'
 
 const { notifications, removeNotification } = useNotifications()
+
+const handleNotificationClick = (notification) => {
+  if (notification.clickable && notification.callback) {
+    notification.callback()
+    removeNotification(notification.id)
+  }
+}
 </script>
 
 <style scoped>
@@ -78,6 +87,35 @@ const { notifications, removeNotification } = useNotifications()
   background: rgba(59, 130, 246, 0.95);
   color: white;
   border-color: rgba(59, 130, 246, 0.3);
+}
+
+.notification-clickable {
+  cursor: pointer;
+  transform: scale(1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.notification-clickable:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px -2px rgb(0 0 0 / 0.2), 0 2px 4px -1px rgb(0 0 0 / 0.1);
+}
+
+.notification-click-hint {
+  font-size: 14px;
+  margin-left: 4px;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
 }
 
 .notification-content {

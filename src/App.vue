@@ -189,11 +189,25 @@ import * as firestoreService from './services/firestore.js'
 import { useAuth } from '@/composables/useAuth.js'
 import { useNotifications } from '@/composables/useNotifications.js'
 import { useConfirm } from '@/composables/useConfirm.js'
+import { usePWA } from '@/composables/usePWA.js'
 
 const { user: firebaseUser, loading: authLoading, logout: firebaseLogout } = useAuth()
 const { addNotification } = useNotifications()
 const { confirmState, confirm, handleConfirm, handleCancel, closeConfirm } = useConfirm()
 const { confirmState: autoGroupJoin, confirm: autoGroupJoinConfirm, handleConfirm: autoGroupJoinHandleConfirm, handleCancel: autoGroupJoinHandleCancel, closeConfirm: autoGroupJoinCloseConfirm } = useConfirm()
+
+// PWA functionality
+const {
+  isInstalled,
+  canInstall,
+  isStandalone,
+  isOnline: pwaIsOnline,
+  updateAvailable,
+  installApp,
+  updateApp,
+  showInstallBanner,
+  isMobile
+} = usePWA()
 
 // Estado de conexión
 const isLoading = ref(true)

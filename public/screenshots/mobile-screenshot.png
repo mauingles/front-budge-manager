@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="390" height="844" viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+  <rect width="390" height="844" fill="#f8fafc"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="390" height="70" fill="#3b82f6"/>
+  <text x="195" y="40" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="white">
+    Budget Manager
+  </text>
+  
+  <!-- Balance card -->
+  <rect x="20" y="90" width="350" height="120" rx="8" fill="white" stroke="#e5e7eb"/>
+  <text x="195" y="115" font-family="Arial, sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="#374151">
+    Balance Mensual
+  </text>
+  
+  <!-- Transaction list -->
+  <rect x="20" y="230" width="350" height="400" rx="8" fill="white" stroke="#e5e7eb"/>
+  <text x="195" y="255" font-family="Arial, sans-serif" font-size="16" font-weight="600" text-anchor="middle" fill="#374151">
+    Transacciones
+  </text>
+  
+  <!-- Action buttons -->
+  <rect x="30" y="650" width="150" height="40" rx="6" fill="#10b981"/>
+  <text x="105" y="675" font-family="Arial, sans-serif" font-size="14" font-weight="600" text-anchor="middle" fill="white">
+    + Ingreso
+  </text>
+  
+  <rect x="210" y="650" width="150" height="40" rx="6" fill="#ef4444"/>
+  <text x="285" y="675" font-family="Arial, sans-serif" font-size="14" font-weight="600" text-anchor="middle" fill="white">
+    - Gasto
+  </text>
+  
+  <!-- Footer -->
+  <text x="195" y="780" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#6b7280">
+    Vista optimizada para móvil
+  </text>
+</svg>
