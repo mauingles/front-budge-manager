@@ -261,26 +261,52 @@ const openWhatsApp = () => {
   const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
   
   if (isMobile) {
-    // En móvil, intentar abrir la app nativa primero
-    const whatsappAppUrl = `whatsapp://send?text=${encodedMessage}`
-    const whatsappWebUrl = `https://wa.me/?text=${encodedMessage}`
+    // Detectar sistema operativo para URLs específicas
+    const isAndroid = /Android/i.test(navigator.userAgent)
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
     
-    // Crear un elemento temporal para detectar si la app está instalada
-    const link = document.createElement('a')
-    link.href = whatsappAppUrl
+    // URLs específicas para cada plataforma
+    let whatsappAppUrl
+    if (isAndroid) {
+      // Android: intentar WhatsApp normal primero, luego Business
+      whatsappAppUrl = `intent://send?text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`
+    } else if (isIOS) {
+      // iOS: usar el esquema estándar de WhatsApp
+      whatsappAppUrl = `whatsapp://send?text=${encodedMessage}`
+    } else {
+      // Otros móviles: usar esquema genérico
+      whatsappAppUrl = `whatsapp://send?text=${encodedMessage}`
+    }
+    
+    const whatsappWebUrl = `https://wa.me/?text=${encodedMessage}`
     
     // Intentar abrir la app nativa
     try {
-      window.location.href = whatsappAppUrl
+      if (isAndroid) {
+        // En Android, usar window.location para intent
+        window.location.href = whatsappAppUrl
+      } else {
+        // En iOS y otros, usar window.open
+        const opened = window.open(whatsappAppUrl, '_self')
+        
+        // Fallback para iOS si no se abre
+        if (!opened) {
+          setTimeout(() => {
+            if (!document.hidden) {
+              window.open(whatsappWebUrl, '_blank')
+            }
+          }, 1500)
+        }
+      }
       
-      // Fallback: si no se abre la app en 2 segundos, abrir la versión web
+      // Fallback general: si no se abre la app en 2 segundos, abrir la versión web
       setTimeout(() => {
-        // Solo abrir la versión web si la página sigue activa (la app no se abrió)
         if (!document.hidden) {
           window.open(whatsappWebUrl, '_blank')
         }
       }, 2000)
     } catch (error) {
+      console.log('Error abriendo WhatsApp nativo, usando web:', error)
       // Si falla, usar la versión web directamente
       window.open(whatsappWebUrl, '_blank')
     }

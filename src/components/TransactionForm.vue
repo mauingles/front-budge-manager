@@ -1,6 +1,27 @@
 <template>
   <form class="transaction-form" @submit.prevent="handleSubmit">
+
     
+    <div class="field">
+      <label>Grupo</label>
+      <select v-model="selectedGroup" class="select" @change="handleGroupChange">
+        <option value="create-new">+ Crear grupo</option>
+        <option v-for="group in availableGroups" :key="group.id" :value="group.id">
+          {{ group.name }}
+        </option>
+      </select>
+    </div>
+    
+    <div class="field">
+      <label>Descripción (opcional)</label>
+      <BaseInput 
+        v-model="description" 
+        :placeholder="type === 'income' ? 'Ej: Salario, Freelance... (opcional)' : 'Ej: Factura de luz, Renta... (opcional)'"
+        :required="false"
+      />
+    </div>
+    
+        
     <div class="field">
       <label>Categoría</label>
       <select v-model="category" class="select" :required="type === 'expense'">
@@ -22,25 +43,6 @@
         </template>
         <option value="otros">Otros</option>
       </select>
-    </div>
-    
-    <div class="field">
-      <label>Grupo</label>
-      <select v-model="selectedGroup" class="select" @change="handleGroupChange">
-        <option value="create-new">+ Crear grupo</option>
-        <option v-for="group in availableGroups" :key="group.id" :value="group.id">
-          {{ group.name }}
-        </option>
-      </select>
-    </div>
-    
-    <div class="field">
-      <label>Descripción (opcional)</label>
-      <BaseInput 
-        v-model="description" 
-        :placeholder="type === 'income' ? 'Ej: Salario, Freelance... (opcional)' : 'Ej: Factura de luz, Renta... (opcional)'"
-        :required="false"
-      />
     </div>
     
     <div class="field">
