@@ -166,6 +166,12 @@
       @cancel="autoGroupJoinHandleCancel"
       @close="autoGroupJoinCloseConfirm" />
 
+    <!-- PWA Redirect Banner -->
+    <PWABanner 
+      :show="showPWABanner"
+      :instructions="getPWAOpenInstructions()"
+      @close="closePWABanner" />
+
     <!-- PWA Install Component -->
     <pwa-install
       ref="pwaInstallRef"
@@ -199,6 +205,7 @@ import UserModal from './components/UserModal.vue'
 import GroupManagementModal from './components/GroupManagementModal.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import PWABanner from './components/PWABanner.vue'
 import '@khmyznikov/pwa-install'
 import apiService from './services/api.js'
 import * as firestoreService from './services/firestore.js'
@@ -220,7 +227,10 @@ const {
   isOnline: pwaIsOnline,
   updateAvailable,
   updateApp,
-  isMobile
+  isMobile,
+  showPWABanner,
+  closePWABanner,
+  getPWAOpenInstructions
 } = usePWA()
 
 // Estado de conexión

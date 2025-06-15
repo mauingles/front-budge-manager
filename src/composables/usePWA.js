@@ -12,6 +12,7 @@ export function usePWA() {
   const installPrompt = ref(null)
   const swRegistration = ref(null)
   const updateAvailable = ref(false)
+  const showPWABanner = ref(false)
   
   // Detectar si ya está instalado
   const checkIfInstalled = () => {
@@ -23,12 +24,131 @@ export function usePWA() {
     if ('getInstalledRelatedApps' in navigator) {
       navigator.getInstalledRelatedApps().then(relatedApps => {
         isInstalled.value = relatedApps.length > 0 || isStandalone.value
+        
+        // Verificar si debemos redirigir a la PWA
+        checkForPWARedirect()
       }).catch(() => {
         isInstalled.value = isStandalone.value
+        checkForPWARedirect()
       })
     } else {
       isInstalled.value = isStandalone.value
+      checkForPWARedirect()
     }
+  }
+  
+  // Verificar si debemos redirigir a la PWA instalada
+  const checkForPWARedirect = () => {
+    // Solo mostrar banner si:
+    // 1. La PWA está instalada
+    // 2. Estamos en el navegador (no en modo standalone)
+    // 3. El usuario no ha deshabilitado el redirect
+    // 4. El banner no fue cerrado en esta sesión
+    const bannerClosed = sessionStorage.getItem('pwa-banner-closed')
+    
+    if (isInstalled.value && !isStandalone.value && shouldRedirectToPWA() && !bannerClosed) {
+      // Mostrar banner persistente en lugar de notificación temporal
+      showPWABanner.value = true
+      
+      // También mostrar notificación la primera vez
+      showPWARedirectPrompt()
+    }
+  }
+  
+  // Verificar si el usuario quiere que se redirija automáticamente
+  const shouldRedirectToPWA = () => {
+    const preference = localStorage.getItem('pwa-redirect-preference')
+    return preference !== 'disabled'
+  }
+  
+  // Mostrar prompt para redirigir a PWA
+  const showPWARedirectPrompt = () => {
+    // Verificar si ya hemos mostrado este prompt recientemente
+    const lastPrompt = localStorage.getItem('pwa-redirect-last-prompt')
+    const now = Date.now()
+    
+    // Solo mostrar una vez por hora
+    if (lastPrompt && (now - parseInt(lastPrompt)) < 3600000) {
+      return
+    }
+    
+    localStorage.setItem('pwa-redirect-last-prompt', now.toString())
+    
+    // Detectar el tipo de dispositivo para mostrar instrucciones específicas
+    const instructions = getPWAOpenInstructions()
+    
+    addNotification(
+      `📱 ${instructions}`,
+      'info',
+      8000
+    )
+  }
+  
+  // Obtener instrucciones específicas por plataforma
+  const getPWAOpenInstructions = () => {
+    if (isMobile()) {
+      if (isIOS()) {
+        return 'Abre Budget Manager desde tu pantalla de inicio para mejor experiencia'
+      } else {
+        // Android
+        return 'Abre Budget Manager desde tu lista de aplicaciones para mejor experiencia'
+      }
+    } else {
+      // Desktop
+      if (navigator.userAgent.includes('Chrome')) {
+        return 'Abre Budget Manager desde la barra de aplicaciones o Chrome Apps para mejor experiencia'
+      } else if (navigator.userAgent.includes('Edge')) {
+        return 'Abre Budget Manager desde el menú de aplicaciones de Edge para mejor experiencia'
+      } else {
+        return 'Abre Budget Manager como aplicación independiente para mejor experiencia'
+      }
+    }
+  }
+  
+  // Redirigir a la PWA instalada (método mejorado)
+  const redirectToPWA = () => {
+    try {
+      console.log('🔄 Detectando PWA instalada...')
+      
+      // En lugar de forzar el redirect, mostrar instrucciones específicas
+      showPWARedirectPrompt()
+      
+    } catch (error) {
+      console.error('Error detectando PWA:', error)
+      showManualPWAOpenInstructions()
+    }
+  }
+  
+  // Mostrar instrucciones manuales para abrir PWA
+  const showManualPWAOpenInstructions = () => {
+    addNotification(
+      '💡 Abre Budget Manager desde tu pantalla de inicio para mejor experiencia',
+      'info',
+      5000
+    )
+  }
+  
+  // Deshabilitar redirect automático (por si el usuario lo prefiere)
+  const disablePWARedirect = () => {
+    localStorage.setItem('pwa-redirect-preference', 'disabled')
+    showPWABanner.value = false
+    addNotification('Banner PWA deshabilitado', 'info', 3000)
+  }
+  
+  // Habilitar redirect automático
+  const enablePWARedirect = () => {
+    localStorage.setItem('pwa-redirect-preference', 'enabled')
+    if (isInstalled.value && !isStandalone.value) {
+      showPWABanner.value = true
+    }
+    addNotification('Banner PWA habilitado', 'success', 3000)
+  }
+  
+  // Cerrar banner temporalmente (se vuelve a mostrar en la próxima visita)
+  const closePWABanner = () => {
+    showPWABanner.value = false
+    // Guardar que se cerró para no molestarlo en esta sesión
+    sessionStorage.setItem('pwa-banner-closed', 'true')
   }
   
   // Registrar Service Worker
@@ -264,12 +384,21 @@ export function usePWA() {
     isStandalone,
     isOnline,
     updateAvailable,
+    showPWABanner,
     
     // Métodos
     updateApp,
     isMobile,
     isIOS,
     checkIfInstalled,
-    checkPWAFeatures
+    checkPWAFeatures,
+    
+    // PWA Redirect
+    redirectToPWA,
+    disablePWARedirect,
+    enablePWARedirect,
+    shouldRedirectToPWA,
+    closePWABanner,
+    getPWAOpenInstructions
   }
 }
