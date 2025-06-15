@@ -15,26 +15,63 @@ export function usePWA() {
   const showPWABanner = ref(false)
   
   // Detectar si ya está instalado
-  const checkIfInstalled = () => {
+  const checkIfInstalled = async () => {
+    console.log('🔍 Verificando si PWA está instalada...')
+    
     // Método 1: Verificar si está en modo standalone
     isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || 
                         window.navigator.standalone === true
     
-    // Método 2: Verificar si está instalado como PWA
+    console.log('🖥️ isStandalone detectado:', isStandalone.value)
+    
+    // Método 2: Verificar localStorage para instalación previa
+    const wasInstalled = localStorage.getItem('pwa-was-installed') === 'true'
+    console.log('💾 localStorage pwa-was-installed:', wasInstalled)
+    
+    // Método 3: Verificar getInstalledRelatedApps (limitado pero útil)
+    let relatedAppsInstalled = false
     if ('getInstalledRelatedApps' in navigator) {
-      navigator.getInstalledRelatedApps().then(relatedApps => {
-        isInstalled.value = relatedApps.length > 0 || isStandalone.value
-        
-        // Verificar si debemos redirigir a la PWA
-        checkForPWARedirect()
-      }).catch(() => {
-        isInstalled.value = isStandalone.value
-        checkForPWARedirect()
-      })
-    } else {
-      isInstalled.value = isStandalone.value
-      checkForPWARedirect()
+      try {
+        const relatedApps = await navigator.getInstalledRelatedApps()
+        relatedAppsInstalled = relatedApps.length > 0
+        console.log('📱 getInstalledRelatedApps:', relatedApps)
+      } catch (error) {
+        console.log('❌ getInstalledRelatedApps falló:', error)
+      }
     }
+    
+    // Método 4: Verificar si beforeinstallprompt fue interceptado y luego desapareció
+    const installPromptWasShown = sessionStorage.getItem('install-prompt-shown') === 'true'
+    const installPromptDisappeared = installPromptWasShown && !window.promptEvent
+    console.log('📦 Install prompt mostrado y desapareció:', installPromptDisappeared)
+    
+    // Método 5: Verificar display mode a través de CSS
+    const isDisplayStandalone = window.matchMedia('(display-mode: standalone)').matches
+    const isDisplayMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches
+    const isDisplayFullscreen = window.matchMedia('(display-mode: fullscreen)').matches
+    const isPWADisplayMode = isDisplayStandalone || isDisplayMinimalUI || isDisplayFullscreen
+    
+    console.log('🎨 Display modes - standalone:', isDisplayStandalone, 'minimal-ui:', isDisplayMinimalUI, 'fullscreen:', isDisplayFullscreen)
+    
+    // Combinar todos los métodos para una detección más robusta
+    isInstalled.value = isStandalone.value || 
+                       wasInstalled || 
+                       relatedAppsInstalled || 
+                       installPromptDisappeared ||
+                       isPWADisplayMode
+    
+    console.log('✅ PWA instalada detectada:', isInstalled.value)
+    
+    // Si detectamos que está instalada pero no estamos en modo standalone, 
+    // significa que estamos en navegador con PWA instalada
+    if (isInstalled.value && !isStandalone.value) {
+      console.log('🌐 PWA instalada pero accediendo desde navegador')
+      // Guardar estado para futuras referencias
+      localStorage.setItem('pwa-was-installed', 'true')
+    }
+    
+    // Verificar si debemos redirigir a la PWA
+    checkForPWARedirect()
   }
   
   // Verificar si debemos redirigir a la PWA instalada
@@ -44,23 +81,35 @@ export function usePWA() {
     console.log('🖥️ isStandalone:', isStandalone.value)
     console.log('⚙️ shouldRedirectToPWA:', shouldRedirectToPWA())
     
-    // Solo mostrar modal si:
+    // Solo proceder si:
     // 1. La PWA está instalada
     // 2. Estamos en el navegador (no en modo standalone)
     // 3. El usuario no ha deshabilitado el redirect
-    // 4. El modal no fue cerrado en esta sesión
-    const modalClosed = sessionStorage.getItem('pwa-modal-closed')
-    console.log('❌ modalClosed:', modalClosed)
-    
-    if (isInstalled.value && !isStandalone.value && shouldRedirectToPWA() && !modalClosed) {
-      console.log('✅ Mostrando modal PWA redirect')
-      // Mostrar modal persistente
-      showPWABanner.value = true
+    if (isInstalled.value && !isStandalone.value && shouldRedirectToPWA()) {
+      const modalClosed = sessionStorage.getItem('pwa-modal-closed')
+      const autoRedirectDisabled = localStorage.getItem('pwa-auto-redirect-disabled') === 'true'
       
-      // También mostrar notificación la primera vez
-      showPWARedirectPrompt()
+      console.log('❌ modalClosed:', modalClosed)
+      console.log('🚫 autoRedirectDisabled:', autoRedirectDisabled)
+      
+      // Si el auto-redirect no está deshabilitado, intentar redirect automático
+      if (!autoRedirectDisabled) {
+        console.log('🚀 Intentando redirect automático a PWA...')
+        setTimeout(() => {
+          redirectToPWA()
+        }, 1500) // Pequeño delay para que cargue la página
+      }
+      
+      // Mostrar modal solo si no fue cerrado en esta sesión
+      if (!modalClosed) {
+        console.log('✅ Mostrando modal PWA redirect')
+        showPWABanner.value = true
+        
+        // También mostrar notificación
+        showPWARedirectPrompt()
+      }
     } else {
-      console.log('❌ No mostrando modal PWA redirect')
+      console.log('❌ No procediendo con PWA redirect')
     }
   }
   
@@ -282,6 +331,16 @@ export function usePWA() {
     showPWABanner.value = true
   }
   
+  // Función de prueba para simular instalación (temporal para debug)
+  const simulateInstallation = () => {
+    console.log('🧪 Simulando instalación de PWA para prueba')
+    localStorage.setItem('pwa-was-installed', 'true')
+    localStorage.setItem('pwa-install-date', new Date().toISOString())
+    isInstalled.value = true
+    canInstall.value = false
+    checkForPWARedirect()
+  }
+  
   // Registrar Service Worker
   const registerServiceWorker = async () => {
     if ('serviceWorker' in navigator) {
@@ -409,6 +468,10 @@ export function usePWA() {
     console.log('💾 Evento beforeinstallprompt capturado')
     event.preventDefault()
     
+    // Marcar que el prompt fue mostrado
+    sessionStorage.setItem('install-prompt-shown', 'true')
+    window.promptEvent = event
+    
     // Solo permitir instalación si NO está ya instalada
     if (!isInstalled.value && !isStandalone.value) {
       installPrompt.value = event
@@ -418,6 +481,8 @@ export function usePWA() {
       console.log('❌ PWA ya está instalada - bloqueando prompt de instalación')
       canInstall.value = false
       installPrompt.value = null
+      // Si ya está instalada, limpiar el evento
+      window.promptEvent = null
     }
   }
   
@@ -446,18 +511,31 @@ export function usePWA() {
   
   // Manejar cambios en el estado de instalación
   const handleAppInstalled = () => {
-    console.log('🎉 Aplicación instalada')
+    console.log('🎉 Aplicación instalada exitosamente')
+    
+    // Marcar como instalada permanentemente
     isInstalled.value = true
     canInstall.value = false
     installPrompt.value = null
     
-    // Ocultar banner de redirect si se muestra (ya no es necesario)
+    // Guardar en localStorage para futuras referencias
+    localStorage.setItem('pwa-was-installed', 'true')
+    localStorage.setItem('pwa-install-date', new Date().toISOString())
+    
+    // Limpiar estados de sesión
+    sessionStorage.removeItem('install-prompt-shown')
+    sessionStorage.removeItem('pwa-modal-closed')
+    
+    // Ocultar modal de redirect si se muestra (ya no es necesario)
     showPWABanner.value = false
     
     // Limpiar cualquier prompt pendiente
     if (window.promptEvent) {
       window.promptEvent = null
     }
+    
+    // Mostrar notificación de éxito
+    addNotification('🎉 ¡Aplicación instalada exitosamente!', 'success', 3000)
     
     // Verificar estado después de instalación
     setTimeout(() => {
@@ -568,6 +646,7 @@ export function usePWA() {
     shouldRedirectToPWA,
     closePWABanner,
     getPWAOpenInstructions,
-    forceShowPWAModal
+    forceShowPWAModal,
+    simulateInstallation
   }
 }

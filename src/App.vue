@@ -53,9 +53,12 @@
             @division-change="handleDivisionChange"
           />
           
-          <!-- Botón temporal para probar modal PWA -->
-          <button @click="forceShowPWAModal" class="btn" title="Test PWA Modal" style="background: #ff6b6b; color: white;">
-            🧪
+          <!-- Botones temporales para debug PWA -->
+          <button @click="forceShowPWAModal" class="btn" title="Test PWA Modal" style="background: #ff6b6b; color: white; font-size: 12px;">
+            🧪 Modal
+          </button>
+          <button @click="simulateInstallation" class="btn" title="Simulate PWA Install" style="background: #28a745; color: white; font-size: 12px;">
+            📱 Simular
           </button>
           
           <button @click="showUserModal = true" class="btn" title="Perfil de usuario">
@@ -171,12 +174,13 @@
       @cancel="autoGroupJoinHandleCancel"
       @close="autoGroupJoinCloseConfirm" />
 
-    <!-- PWA Redirect Banner -->
+    <!-- PWA Redirect Modal -->
     <PWABanner 
       :show="showPWABanner"
       :instructions="getPWAOpenInstructions()"
       @close="closePWABanner"
-      @redirect="handlePWARedirect" />
+      @redirect="handlePWARedirect"
+      @disable="handleDisableAutoRedirect" />
 
     <!-- PWA Install Component -->
     <pwa-install
@@ -238,7 +242,8 @@ const {
   closePWABanner,
   getPWAOpenInstructions,
   redirectToPWA,
-  forceShowPWAModal
+  forceShowPWAModal,
+  simulateInstallation
 } = usePWA()
 
 // Estado de conexión
@@ -1958,10 +1963,20 @@ const handlePWAInstallAvailable = (event) => {
   }
 }
 
-// Handler para el botón de redirect del banner
+// Handler para el botón de redirect del modal
 const handlePWARedirect = () => {
   console.log('🚀 Usuario solicita redirect a PWA')
   redirectToPWA()
+}
+
+// Handler para deshabilitar auto-redirect
+const handleDisableAutoRedirect = () => {
+  console.log('🚫 Usuario deshabilitó auto-redirect')
+  localStorage.setItem('pwa-auto-redirect-disabled', 'true')
+  closePWABanner()
+  
+  // Mostrar notificación
+  addNotification('Auto-redirect deshabilitado', 'info', 3000)
 }
 </script>
 

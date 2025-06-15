@@ -23,6 +23,9 @@
         
         <!-- Footer -->
         <div class="pwa-modal-footer">
+          <button @click="$emit('disable')" class="btn btn-tertiary" title="No volver a mostrar automáticamente">
+            No automático
+          </button>
           <button @click="$emit('close')" class="btn btn-secondary">
             Más tarde
           </button>
@@ -47,7 +50,7 @@ defineProps({
   }
 })
 
-defineEmits(['close', 'redirect'])
+defineEmits(['close', 'redirect', 'disable'])
 </script>
 
 <style scoped>
@@ -179,6 +182,18 @@ defineEmits(['close', 'redirect'])
 .btn-primary:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-tertiary {
+  background: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  font-size: 0.8rem;
+}
+
+.btn-tertiary:hover {
+  background: #e9ecef;
+  color: #495057;
 }
 
 /* Animations */
