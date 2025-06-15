@@ -324,22 +324,6 @@ export function usePWA() {
     sessionStorage.setItem('pwa-modal-closed', 'true')
   }
   
-  // Función de prueba para forzar mostrar el modal (temporal para debug)
-  const forceShowPWAModal = () => {
-    console.log('🧪 Forzando mostrar modal PWA para prueba')
-    sessionStorage.removeItem('pwa-modal-closed')
-    showPWABanner.value = true
-  }
-  
-  // Función de prueba para simular instalación (temporal para debug)
-  const simulateInstallation = () => {
-    console.log('🧪 Simulando instalación de PWA para prueba')
-    localStorage.setItem('pwa-was-installed', 'true')
-    localStorage.setItem('pwa-install-date', new Date().toISOString())
-    isInstalled.value = true
-    canInstall.value = false
-    checkForPWARedirect()
-  }
   
   // Registrar Service Worker
   const registerServiceWorker = async () => {
@@ -645,8 +629,6 @@ export function usePWA() {
     enablePWARedirect,
     shouldRedirectToPWA,
     closePWABanner,
-    getPWAOpenInstructions,
-    forceShowPWAModal,
-    simulateInstallation
+    getPWAOpenInstructions
   }
 }

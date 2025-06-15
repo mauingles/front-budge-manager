@@ -53,14 +53,6 @@
             @division-change="handleDivisionChange"
           />
           
-          <!-- Botones temporales para debug PWA -->
-          <button @click="forceShowPWAModal" class="btn" title="Test PWA Modal" style="background: #ff6b6b; color: white; font-size: 12px;">
-            🧪 Modal
-          </button>
-          <button @click="simulateInstallation" class="btn" title="Simulate PWA Install" style="background: #28a745; color: white; font-size: 12px;">
-            📱 Simular
-          </button>
-          
           <button @click="showUserModal = true" class="btn" title="Perfil de usuario">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 16px; height: 16px;">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -242,8 +234,6 @@ const {
   closePWABanner,
   getPWAOpenInstructions,
   redirectToPWA,
-  forceShowPWAModal,
-  simulateInstallation
 } = usePWA()
 
 // Estado de conexión
