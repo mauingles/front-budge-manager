@@ -1,6 +1,6 @@
-const CACHE_NAME = 'budget-manager-v1.0.12'
-const STATIC_CACHE = 'budget-manager-static-v1.0.12'
-const DYNAMIC_CACHE = 'budget-manager-dynamic-v1.0.12'
+const CACHE_NAME = 'budget-manager-v1.0.13'
+const STATIC_CACHE = 'budget-manager-static-v1.0.13'
+const DYNAMIC_CACHE = 'budget-manager-dynamic-v1.0.13'
 
 // Archivos que se cachean en la instalación
 const STATIC_FILES = [
@@ -166,7 +166,14 @@ self.addEventListener('message', (event) => {
   
   if (event.data && event.data.type === 'SKIP_WAITING') {
     console.log('⏭️ Service Worker: Saltando espera...')
-    self.skipWaiting()
+    self.skipWaiting().then(() => {
+      // Notificar a todos los clientes que el SW se ha activado
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ type: 'SW_ACTIVATED' })
+        })
+      })
+    })
   }
   
   if (event.data && event.data.type === 'GET_VERSION') {

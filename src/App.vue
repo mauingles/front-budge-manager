@@ -587,25 +587,7 @@ const handleUserAuthentication = async () => {
     
     currentUser.value = user
     
-    // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
-    if (!selectedGroup.value || (user.role === 'user' && !selectedGroup.value)) {
-      // Intentar restaurar el grupo guardado primero
-      if (!restoreSelectedGroup()) {
-        // Si no hay grupo guardado o no es válido, usar el grupo por defecto
-        const userDefaultGroup = groups.value.find(g => 
-          g.createdBy === user.id && g.name === 'Mis finanzas'
-        )
-        if (userDefaultGroup) {
-          console.log('📌 Seleccionando grupo existente "Mis finanzas" para usuario existente')
-          selectedGroup.value = userDefaultGroup
-          saveSelectedGroup(userDefaultGroup)
-        } else {
-          console.log('⚠️ Usuario existente sin grupo "Mis finanzas" - esto no debería pasar')
-          // No crear el grupo aquí para usuarios existentes
-          // Dejar que se maneje en el watcher de grupos cuando se carguen
-        }
-      }
-    }
+    // La selección de grupo se maneja en autoSelectGroup() que se ejecuta después
     
     await handleGroupCode()
     
@@ -723,19 +705,8 @@ watch([groups, currentUser], async () => {
     
     // Luego seleccionar el grupo por defecto si no hay ninguno seleccionado
     if (!selectedGroup.value) {
-      console.log('👀 Grupos cargados, verificando grupo guardado o por defecto')
-      // Intentar restaurar el grupo guardado primero
-      if (!restoreSelectedGroup()) {
-        // Si no hay grupo guardado, usar el grupo por defecto
-        const userDefaultGroup = groups.value.find(g => 
-          g.createdBy === currentUser.value.id && g.name === 'Mis finanzas'
-        )
-        if (userDefaultGroup) {
-          console.log('✅ Seleccionando grupo "Mis finanzas" existente')
-          selectedGroup.value = userDefaultGroup
-          saveSelectedGroup(userDefaultGroup)
-        }
-      }
+      console.log('👀 Grupos cargados, ejecutando auto-selección')
+      autoSelectGroup()
     }
   }
 }, { immediate: true })
@@ -775,6 +746,12 @@ const autoSelectGroup = () => {
   if (!currentUser.value || selectedGroup.value) return
   
   console.log('🔍 Auto-seleccionando grupo...')
+  
+  // Primero intentar restaurar el grupo guardado
+  if (restoreSelectedGroup()) {
+    console.log('✅ Grupo restaurado desde localStorage')
+    return
+  }
   
   // Obtener grupos accesibles para el usuario actual
   const accessibleGroups = userGroups.value

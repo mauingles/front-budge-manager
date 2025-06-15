@@ -23,8 +23,10 @@ export function useAuth() {
       // Intentar popup primero
       try {
         const result = await signInWithPopup(auth, googleProvider)
-        user.value = result.user
         console.log('Login exitoso con popup:', result.user)
+        // No establecer user.value aquí - dejar que onAuthStateChanged lo maneje
+        // Dar un pequeño tiempo para que onAuthStateChanged se ejecute
+        await new Promise(resolve => setTimeout(resolve, 100))
       } catch (popupError) {
         console.log('Error con popup, intentando redirect...', popupError.message)
         
@@ -33,11 +35,14 @@ export function useAuth() {
             popupError.code === 'auth/popup-closed-by-user' ||
             popupError.code === 'auth/cancelled-popup-request') {
           await signInWithRedirect(auth, googleProvider)
-          return // El redirect manejará el resultado
+          return // El redirect manejará el resultado y onAuthStateChanged el usuario
         } else {
           throw popupError
         }
       }
+      
+      // No poner loading = false aquí - dejar que onAuthStateChanged lo maneje
+      
     } catch (err) {
       let errorMessage = 'Error en login con Google'
       
@@ -53,8 +58,7 @@ export function useAuth() {
       
       error.value = errorMessage
       console.error('Error en login con Google:', err)
-    } finally {
-      loading.value = false
+      loading.value = false // Solo poner loading = false en caso de error
     }
   }
 
@@ -112,8 +116,13 @@ export function useAuth() {
     
     // Configurar listener de cambios de autenticación
     onAuthStateChanged(auth, (authUser) => {
+      console.log('🔐 Auth state changed:', authUser ? 'User logged in' : 'User logged out')
       user.value = authUser
       loading.value = false
+      // Limpiar errores cuando la autenticación es exitosa
+      if (authUser) {
+        error.value = null
+      }
     })
     
     // Fallback: asegurar que loading se ponga en false después de un tiempo

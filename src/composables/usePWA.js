@@ -43,7 +43,7 @@ export function usePWA() {
         swRegistration.value = registration
         console.log('✅ Service Worker registrado:', registration.scope)
         
-        // Verificar actualizaciones
+        // Verificar actualizaciones nuevas
         registration.addEventListener('updatefound', () => {
           console.log('🔄 Nueva versión encontrada')
           const newWorker = registration.installing
@@ -53,23 +53,17 @@ export function usePWA() {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('📦 Nueva versión lista para instalar')
                 updateAvailable.value = true
-                showUpdateNotification()
+                handleUpdateFound()
               }
             })
           }
         })
         
-        // Verificar si hay una actualización esperando
+        // Verificar si ya hay una actualización esperando (al recargar la página)
         if (registration.waiting) {
-          const lastUpdateCheck = localStorage.getItem('lastUpdateCheck')
-          const currentTime = Date.now().toString()
-          
-          // Solo mostrar si no se ha chequeado en los últimos 30 segundos
-          if (!lastUpdateCheck || (Date.now() - parseInt(lastUpdateCheck)) > 30000) {
-            updateAvailable.value = true
-            showUpdateNotification()
-            localStorage.setItem('lastUpdateCheck', currentTime)
-          }
+          console.log('📦 Actualización ya disponible al cargar')
+          updateAvailable.value = true
+          handleUpdateFound()
         }
         
         return registration
@@ -83,17 +77,28 @@ export function usePWA() {
     }
   }
   
-  // Mostrar notificación de actualización automática
-  const showUpdateNotification = () => {
-    // Verificar si ya se mostró la notificación para esta versión
-    const lastUpdateNotification = localStorage.getItem('lastUpdateNotification')
-    const currentVersion = getCurrentVersion()
+  // Manejar cuando se encuentra una actualización
+  const handleUpdateFound = () => {
+    const updateSessionKey = 'updateHandled_' + Date.now()
+    const lastUpdateHandled = localStorage.getItem('lastUpdateHandled')
     
-    if (lastUpdateNotification === currentVersion) {
-      console.log('🔄 Notificación ya mostrada para esta versión')
+    // Evitar actualizaciones múltiples en la misma sesión
+    if (lastUpdateHandled && (Date.now() - parseInt(lastUpdateHandled)) < 10000) {
+      console.log('🔄 Actualización ya manejada recientemente')
       return
     }
     
+    console.log('🔄 Manejando nueva actualización disponible')
+    
+    // Marcar que estamos manejando la actualización
+    localStorage.setItem('lastUpdateHandled', Date.now().toString())
+    
+    // Mostrar notificación y actualizar automáticamente
+    showUpdateNotification()
+  }
+  
+  // Mostrar notificación de actualización automática
+  const showUpdateNotification = () => {
     // Solo mostrar notificación informativa
     addNotification(
       '🔄 Nueva versión disponible',
@@ -101,36 +106,50 @@ export function usePWA() {
       3000
     )
     
-    // Guardar que se mostró la notificación para esta versión
-    localStorage.setItem('lastUpdateNotification', currentVersion)
-    
     // Actualizar automáticamente inmediatamente (sin esperar interacción del usuario)
     updateApp()
   }
   
   // Obtener versión actual del service worker
   const getCurrentVersion = () => {
-    return swRegistration.value?.active?.scriptURL || 'unknown'
+    // Usar timestamp del registro en lugar del scriptURL
+    const registration = swRegistration.value
+    if (registration?.active) {
+      return `${registration.active.scriptURL}?${Date.now()}`
+    }
+    return 'unknown'
   }
   
   // Actualizar la aplicación
   const updateApp = () => {
     if (swRegistration.value?.waiting) {
+      console.log('🔄 Iniciando actualización de la aplicación')
+      
       addNotification(
         '✨ Aplicación actualizada. Recargando...',
         'success',
         2000
       )
       
+      // Enviar mensaje al service worker para que se active
       swRegistration.value.waiting.postMessage({ type: 'SKIP_WAITING' })
       
-      // Limpiar el flag de notificación antes de recargar
-      localStorage.removeItem('lastUpdateNotification')
+      // Limpiar flags antes de recargar
+      localStorage.removeItem('lastUpdateHandled')
       
-      // Recargar después de mostrar la notificación
-      setTimeout(() => {
+      // Escuchar cuando el nuevo SW toma control
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('🔄 Nuevo Service Worker activo, recargando...')
         window.location.reload()
-      }, 1500)
+      })
+      
+      // Fallback: recargar después de un tiempo si controllerchange no se dispara
+      setTimeout(() => {
+        console.log('🔄 Recargando por timeout fallback')
+        window.location.reload()
+      }, 2000)
+    } else {
+      console.log('⚠️ No hay Service Worker esperando para actualizar')
     }
   }
   
@@ -199,11 +218,27 @@ export function usePWA() {
     // Registrar Service Worker
     await registerServiceWorker()
     
+    // Verificación periódica de actualizaciones cada 60 segundos
+    setInterval(() => {
+      if (swRegistration.value) {
+        console.log('🔍 Verificando actualizaciones periódicamente...')
+        swRegistration.value.update()
+      }
+    }, 60000)
+    
     // Event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     window.addEventListener('appinstalled', handleAppInstalled)
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
+    
+    // Escuchar mensajes del Service Worker
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'SW_ACTIVATED') {
+        console.log('🔄 Service Worker activado, recargando página...')
+        window.location.reload()
+      }
+    })
     
     
     console.log('✅ PWA inicializado')
