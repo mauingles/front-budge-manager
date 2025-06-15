@@ -166,13 +166,6 @@
       @cancel="autoGroupJoinHandleCancel"
       @close="autoGroupJoinCloseConfirm" />
 
-    <!-- PWA Redirect Modal -->
-    <PWABanner 
-      :show="showPWABanner"
-      :instructions="getPWAOpenInstructions()"
-      @close="closePWABanner"
-      @redirect="handlePWARedirect"
-      @disable="handleDisableAutoRedirect" />
 
     <!-- PWA Install Component -->
     <pwa-install
@@ -207,7 +200,6 @@ import UserModal from './components/UserModal.vue'
 import GroupManagementModal from './components/GroupManagementModal.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
-import PWABanner from './components/PWABanner.vue'
 import '@khmyznikov/pwa-install'
 import apiService from './services/api.js'
 import * as firestoreService from './services/firestore.js'
@@ -230,10 +222,6 @@ const {
   updateAvailable,
   updateApp,
   isMobile,
-  showPWABanner,
-  closePWABanner,
-  getPWAOpenInstructions,
-  redirectToPWA,
 } = usePWA()
 
 // Estado de conexión
@@ -1937,37 +1925,15 @@ const handlePWAInstallAvailable = (event) => {
   console.log('PWA Install Available:', event.detail)
   pwaInstallAvailable.value = true
   
-  // Pasar el evento capturado tempranamente al componente
-  if (window.promptEvent && pwaInstallRef.value) {
-    pwaInstallRef.value.externalPromptEvent = window.promptEvent
-  }
-  
-  // Solo mostrar el modal si NO está instalado (evitar duplicados)
-  if (!isInstalled.value && !isStandalone.value) {
-    setTimeout(() => {
-      if (pwaInstallRef.value && pwaInstallAvailable.value && !isInstalled.value) {
-        console.log('Mostrando modal PWA install')
-        pwaInstallRef.value.showDialog()
-      }
-    }, 3000) // Mostrar después de 3 segundos
-  }
+  // Mostrar modal después de 3 segundos
+  setTimeout(() => {
+    if (pwaInstallRef.value && pwaInstallAvailable.value) {
+      console.log('Mostrando modal PWA install')
+      pwaInstallRef.value.showDialog()
+    }
+  }, 3000)
 }
 
-// Handler para el botón de redirect del modal
-const handlePWARedirect = () => {
-  console.log('🚀 Usuario solicita redirect a PWA')
-  redirectToPWA()
-}
-
-// Handler para deshabilitar auto-redirect
-const handleDisableAutoRedirect = () => {
-  console.log('🚫 Usuario deshabilitó auto-redirect')
-  localStorage.setItem('pwa-auto-redirect-disabled', 'true')
-  closePWABanner()
-  
-  // Mostrar notificación
-  addNotification('Auto-redirect deshabilitado', 'info', 3000)
-}
 </script>
 
 <style>
