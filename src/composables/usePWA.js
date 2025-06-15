@@ -12,6 +12,7 @@ export function usePWA() {
   const installPrompt = ref(null)
   const swRegistration = ref(null)
   const updateAvailable = ref(false)
+  const showInstallModal = ref(false)
   
   // Detectar si ya está instalado
   const checkIfInstalled = () => {
@@ -109,17 +110,16 @@ export function usePWA() {
     }
   }
   
-  // Mostrar banner de instalación
+  // Mostrar modal de instalación
   const showInstallBanner = () => {
     if (!canInstall.value || isInstalled.value) return
     
-    const deviceType = isMobile() ? 'teléfono' : 'escritorio'
-    addNotification(
-      `💾 ¡Instala Budget Manager en tu ${deviceType}! Accede más rápido y funciona offline.`,
-      'info',
-      15000,
-      () => installApp()
-    )
+    showInstallModal.value = true
+  }
+  
+  // Cerrar modal de instalación
+  const closeInstallModal = () => {
+    showInstallModal.value = false
   }
   
   // Instalar la aplicación
@@ -130,6 +130,9 @@ export function usePWA() {
     }
     
     try {
+      // Cerrar modal primero
+      showInstallModal.value = false
+      
       console.log('📱 Mostrando prompt de instalación...')
       const result = await installPrompt.value.prompt()
       console.log('📊 Resultado de instalación:', result.outcome)
@@ -255,11 +258,13 @@ export function usePWA() {
     isStandalone,
     isOnline,
     updateAvailable,
+    showInstallModal,
     
     // Métodos
     installApp,
     updateApp,
     showInstallBanner,
+    closeInstallModal,
     showIOSInstructions,
     isMobile,
     isIOS,

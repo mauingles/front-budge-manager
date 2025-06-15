@@ -165,6 +165,11 @@
       @confirm="autoGroupJoinHandleConfirm"
       @cancel="autoGroupJoinHandleCancel"
       @close="autoGroupJoinCloseConfirm" />
+
+    <InstallPWAModal 
+      :show="showInstallModal"
+      @close="closeInstallModal"
+      @install="installApp" />
   </AppLayout>
 </template>
 
@@ -184,6 +189,7 @@ import UserModal from './components/UserModal.vue'
 import GroupManagementModal from './components/GroupManagementModal.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import InstallPWAModal from './components/InstallPWAModal.vue'
 import apiService from './services/api.js'
 import * as firestoreService from './services/firestore.js'
 import { useAuth } from '@/composables/useAuth.js'
@@ -206,6 +212,8 @@ const {
   installApp,
   updateApp,
   showInstallBanner,
+  showInstallModal,
+  closeInstallModal,
   isMobile
 } = usePWA()
 
