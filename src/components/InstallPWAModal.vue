@@ -47,9 +47,6 @@
             </button>
           </div>
           
-          <div class="install-timer">
-            Se cerrará automáticamente en {{ countdown }}s
-          </div>
         </div>
       </div>
     </div>
@@ -57,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted, computed } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps(['show'])
 const emit = defineEmits(['close', 'install'])
@@ -67,48 +64,13 @@ const isIOS = computed(() => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
 })
 
-const countdown = ref(6)
-let countdownInterval = null
-
 const handleClose = () => {
-  clearCountdownTimer()
   emit('close')
 }
 
 const handleInstall = () => {
-  clearCountdownTimer()
   emit('install')
 }
-
-const startCountdown = () => {
-  countdown.value = 6
-  countdownInterval = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      handleClose()
-    }
-  }, 1000)
-}
-
-const clearCountdownTimer = () => {
-  if (countdownInterval) {
-    clearInterval(countdownInterval)
-    countdownInterval = null
-  }
-}
-
-// Iniciar countdown cuando se muestra el modal
-watch(() => props.show, (newValue) => {
-  if (newValue) {
-    startCountdown()
-  } else {
-    clearCountdownTimer()
-  }
-})
-
-onUnmounted(() => {
-  clearCountdownTimer()
-})
 </script>
 
 <style scoped>
