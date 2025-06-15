@@ -246,6 +246,54 @@ const getCurrentMonth = () => {
 }
 const selectedMonth = ref(getCurrentMonth())
 const selectedGroup = ref(null) // Grupo seleccionado actualmente
+
+// Funciones para persistencia del grupo seleccionado
+const saveSelectedGroup = (group) => {
+  if (group && currentUser.value) {
+    const key = `selectedGroup_${currentUser.value.id}`
+    localStorage.setItem(key, JSON.stringify({ id: group.id, name: group.name }))
+  }
+}
+
+const loadSelectedGroup = () => {
+  if (currentUser.value) {
+    const key = `selectedGroup_${currentUser.value.id}`
+    const saved = localStorage.getItem(key)
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch (error) {
+        console.error('Error parsing saved group:', error)
+        localStorage.removeItem(key)
+      }
+    }
+  }
+  return null
+}
+
+const clearSelectedGroup = () => {
+  if (currentUser.value) {
+    const key = `selectedGroup_${currentUser.value.id}`
+    localStorage.removeItem(key)
+  }
+}
+
+const restoreSelectedGroup = () => {
+  const savedGroup = loadSelectedGroup()
+  if (savedGroup && groups.value.length > 0) {
+    // Buscar el grupo guardado en la lista actual
+    const foundGroup = groups.value.find(g => g.id === savedGroup.id)
+    if (foundGroup && hasGroupAccess(foundGroup.id)) {
+      console.log('📌 Restaurando grupo seleccionado:', foundGroup.name)
+      selectedGroup.value = foundGroup
+      return true
+    } else {
+      console.log('⚠️ Grupo guardado ya no existe o sin acceso, limpiando...')
+      clearSelectedGroup()
+    }
+  }
+  return false
+}
 const transactions = ref([])
 const groups = ref([])
 
@@ -525,6 +573,8 @@ const handleUserAuthentication = async () => {
       // Crear grupo por defecto "Mis finanzas" para el nuevo usuario y seleccionarlo
       const defaultGroup = await createDefaultGroup(user)
       selectedGroup.value = defaultGroup
+      // Guardar el grupo por defecto como seleccionado
+      saveSelectedGroup(defaultGroup)
     } else {
       // Usuario existente: sincronizar datos de Firebase con los datos del servidor
       console.log('🔄 Actualizando datos de usuario existente')
@@ -539,16 +589,21 @@ const handleUserAuthentication = async () => {
     
     // Si es un usuario existente sin grupo seleccionado, seleccionar su grupo "Mis finanzas" si existe
     if (!selectedGroup.value || (user.role === 'user' && !selectedGroup.value)) {
-      const userDefaultGroup = groups.value.find(g => 
-        g.createdBy === user.id && g.name === 'Mis finanzas'
-      )
-      if (userDefaultGroup) {
-        console.log('📌 Seleccionando grupo existente "Mis finanzas" para usuario existente')
-        selectedGroup.value = userDefaultGroup
-      } else {
-        console.log('⚠️ Usuario existente sin grupo "Mis finanzas" - esto no debería pasar')
-        // No crear el grupo aquí para usuarios existentes
-        // Dejar que se maneje en el watcher de grupos cuando se carguen
+      // Intentar restaurar el grupo guardado primero
+      if (!restoreSelectedGroup()) {
+        // Si no hay grupo guardado o no es válido, usar el grupo por defecto
+        const userDefaultGroup = groups.value.find(g => 
+          g.createdBy === user.id && g.name === 'Mis finanzas'
+        )
+        if (userDefaultGroup) {
+          console.log('📌 Seleccionando grupo existente "Mis finanzas" para usuario existente')
+          selectedGroup.value = userDefaultGroup
+          saveSelectedGroup(userDefaultGroup)
+        } else {
+          console.log('⚠️ Usuario existente sin grupo "Mis finanzas" - esto no debería pasar')
+          // No crear el grupo aquí para usuarios existentes
+          // Dejar que se maneje en el watcher de grupos cuando se carguen
+        }
       }
     }
     
@@ -559,6 +614,7 @@ const handleUserAuthentication = async () => {
   } else {
     currentUser.value = null
     selectedGroup.value = null
+    clearSelectedGroup()
   }
 }
 
@@ -667,13 +723,18 @@ watch([groups, currentUser], async () => {
     
     // Luego seleccionar el grupo por defecto si no hay ninguno seleccionado
     if (!selectedGroup.value) {
-      console.log('👀 Grupos cargados, verificando grupo por defecto para usuario existente')
-      const userDefaultGroup = groups.value.find(g => 
-        g.createdBy === currentUser.value.id && g.name === 'Mis finanzas'
-      )
-      if (userDefaultGroup) {
-        console.log('✅ Seleccionando grupo "Mis finanzas" existente')
-        selectedGroup.value = userDefaultGroup
+      console.log('👀 Grupos cargados, verificando grupo guardado o por defecto')
+      // Intentar restaurar el grupo guardado primero
+      if (!restoreSelectedGroup()) {
+        // Si no hay grupo guardado, usar el grupo por defecto
+        const userDefaultGroup = groups.value.find(g => 
+          g.createdBy === currentUser.value.id && g.name === 'Mis finanzas'
+        )
+        if (userDefaultGroup) {
+          console.log('✅ Seleccionando grupo "Mis finanzas" existente')
+          selectedGroup.value = userDefaultGroup
+          saveSelectedGroup(userDefaultGroup)
+        }
       }
     }
   }
@@ -865,6 +926,12 @@ const handleCreateGroupFromTransaction = () => {
 
 const handleGroupChange = (newGroup) => {
   selectedGroup.value = newGroup
+  // Guardar el grupo seleccionado en localStorage
+  if (newGroup) {
+    saveSelectedGroup(newGroup)
+  } else {
+    clearSelectedGroup()
+  }
 }
 
 const handleDivisionChange = (divisionType) => {
@@ -1722,6 +1789,7 @@ const handleLeaveGroup = async (groupId) => {
     
     if (selectedGroup.value && selectedGroup.value.id === groupId) {
       selectedGroup.value = null
+      clearSelectedGroup()
     }
     
     addNotification(`Has salido del grupo "${group.name}"`, 'success')
@@ -1775,6 +1843,7 @@ const handleDeleteGroup = async (groupId) => {
     
     if (selectedGroup.value && selectedGroup.value.id === groupId) {
       selectedGroup.value = null
+      clearSelectedGroup()
     }
     
     addNotification(`Grupo "${group?.name || 'Grupo'}" eliminado correctamente`, 'success')
@@ -1802,6 +1871,7 @@ const handleHideGroup = async (groupId) => {
     
     if (selectedGroup.value && selectedGroup.value.id === groupId) {
       selectedGroup.value = null
+      clearSelectedGroup()
     }
     
     addNotification(`Grupo "${group.name}" ocultado correctamente`, 'success')
