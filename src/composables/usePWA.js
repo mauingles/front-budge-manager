@@ -77,21 +77,35 @@ export function usePWA() {
     }
   }
   
-  // Mostrar notificación de actualización
+  // Mostrar notificación de actualización automática
   const showUpdateNotification = () => {
     addNotification(
-      'Nueva versión disponible. Haz clic aquí para actualizar.',
+      '🔄 Nueva versión encontrada. Actualizando automáticamente...',
       'info',
-      10000,
-      () => updateApp()
+      3000
     )
+    
+    // Actualizar automáticamente después de 2 segundos
+    setTimeout(() => {
+      updateApp()
+    }, 2000)
   }
   
   // Actualizar la aplicación
   const updateApp = () => {
     if (swRegistration.value?.waiting) {
+      addNotification(
+        '✨ Aplicación actualizada. Recargando...',
+        'success',
+        2000
+      )
+      
       swRegistration.value.waiting.postMessage({ type: 'SKIP_WAITING' })
-      window.location.reload()
+      
+      // Recargar después de mostrar la notificación
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     }
   }
   

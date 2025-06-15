@@ -1,6 +1,6 @@
-const CACHE_NAME = 'budget-manager-v1.0.7'
-const STATIC_CACHE = 'budget-manager-static-v1.0.7'
-const DYNAMIC_CACHE = 'budget-manager-dynamic-v1.0.7'
+const CACHE_NAME = 'budget-manager-v1.0.8'
+const STATIC_CACHE = 'budget-manager-static-v1.0.8'
+const DYNAMIC_CACHE = 'budget-manager-dynamic-v1.0.8'
 
 // Archivos que se cachean en la instalación
 const STATIC_FILES = [
