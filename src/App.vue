@@ -166,10 +166,19 @@
       @cancel="autoGroupJoinHandleCancel"
       @close="autoGroupJoinCloseConfirm" />
 
-    <InstallPWAModal 
-      :show="showInstallModal"
-      @close="closeInstallModal"
-      @install="installApp" />
+    <!-- PWA Install Component -->
+    <pwa-install
+      ref="pwaInstallRef"
+      manual-chrome="false"
+      manual-apple="false"
+      install-description="¡Instala Budget Manager para acceso rápido desde tu escritorio!"
+      name="Budget Manager"
+      description="Gestiona tu presupuesto de forma fácil y rápida"
+      disable-screenshots="true"
+      @pwa-install-success-event="handlePWAInstallSuccess"
+      @pwa-install-fail-event="handlePWAInstallFail"
+      @pwa-user-choice-result-event="handlePWAUserChoice"
+    ></pwa-install>
   </AppLayout>
 </template>
 
@@ -189,7 +198,7 @@ import UserModal from './components/UserModal.vue'
 import GroupManagementModal from './components/GroupManagementModal.vue'
 import NotificationContainer from './components/NotificationContainer.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
-import InstallPWAModal from './components/InstallPWAModal.vue'
+import '@khmyznikov/pwa-install'
 import apiService from './services/api.js'
 import * as firestoreService from './services/firestore.js'
 import { useAuth } from '@/composables/useAuth.js'
@@ -209,11 +218,7 @@ const {
   isStandalone,
   isOnline: pwaIsOnline,
   updateAvailable,
-  installApp,
   updateApp,
-  showInstallBanner,
-  showInstallModal,
-  closeInstallModal,
   isMobile
 } = usePWA()
 
@@ -1843,6 +1848,26 @@ const processInvitation = (inviteCode) => {
     }
   } else {
     addNotification('Código de invitación inválido', 'error')
+  }
+}
+
+// PWA Install Handlers
+const pwaInstallRef = ref(null)
+
+const handlePWAInstallSuccess = (event) => {
+  console.log('PWA Install Success:', event.detail.message)
+  addNotification('¡Aplicación instalada exitosamente!', 'success', 5000)
+}
+
+const handlePWAInstallFail = (event) => {
+  console.log('PWA Install Failed:', event.detail.message)
+  addNotification('Error durante la instalación', 'error')
+}
+
+const handlePWAUserChoice = (event) => {
+  console.log('PWA User Choice:', event.detail.message)
+  if (event.detail.message === 'dismissed') {
+    addNotification('Instalación cancelada. Puedes instalar más tarde desde el menú del navegador.', 'info', 5000)
   }
 }
 </script>

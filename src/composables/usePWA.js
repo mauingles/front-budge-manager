@@ -12,7 +12,6 @@ export function usePWA() {
   const installPrompt = ref(null)
   const swRegistration = ref(null)
   const updateAvailable = ref(false)
-  const showInstallModal = ref(false)
   
   // Detectar si ya está instalado
   const checkIfInstalled = () => {
@@ -62,8 +61,15 @@ export function usePWA() {
         
         // Verificar si hay una actualización esperando
         if (registration.waiting) {
-          updateAvailable.value = true
-          showUpdateNotification()
+          const lastUpdateCheck = localStorage.getItem('lastUpdateCheck')
+          const currentTime = Date.now().toString()
+          
+          // Solo mostrar si no se ha chequeado en los últimos 30 segundos
+          if (!lastUpdateCheck || (Date.now() - parseInt(lastUpdateCheck)) > 30000) {
+            updateAvailable.value = true
+            showUpdateNotification()
+            localStorage.setItem('lastUpdateCheck', currentTime)
+          }
         }
         
         return registration
@@ -79,16 +85,32 @@ export function usePWA() {
   
   // Mostrar notificación de actualización automática
   const showUpdateNotification = () => {
+    // Verificar si ya se mostró la notificación para esta versión
+    const lastUpdateNotification = localStorage.getItem('lastUpdateNotification')
+    const currentVersion = getCurrentVersion()
+    
+    if (lastUpdateNotification === currentVersion) {
+      console.log('🔄 Notificación ya mostrada para esta versión')
+      return
+    }
+    
+    // Solo mostrar notificación informativa
     addNotification(
-      '🔄 Nueva versión encontrada. Actualizando automáticamente...',
+      '🔄 Nueva versión disponible',
       'info',
       3000
     )
     
-    // Actualizar automáticamente después de 2 segundos
-    setTimeout(() => {
-      updateApp()
-    }, 2000)
+    // Guardar que se mostró la notificación para esta versión
+    localStorage.setItem('lastUpdateNotification', currentVersion)
+    
+    // Actualizar automáticamente inmediatamente (sin esperar interacción del usuario)
+    updateApp()
+  }
+  
+  // Obtener versión actual del service worker
+  const getCurrentVersion = () => {
+    return swRegistration.value?.active?.scriptURL || 'unknown'
   }
   
   // Actualizar la aplicación
@@ -101,6 +123,9 @@ export function usePWA() {
       )
       
       swRegistration.value.waiting.postMessage({ type: 'SKIP_WAITING' })
+      
+      // Limpiar el flag de notificación antes de recargar
+      localStorage.removeItem('lastUpdateNotification')
       
       // Recargar después de mostrar la notificación
       setTimeout(() => {
@@ -115,62 +140,8 @@ export function usePWA() {
     event.preventDefault()
     installPrompt.value = event
     canInstall.value = true
-    
-    // Solo mostrar el banner si no está instalado y es móvil
-    if (!isInstalled.value && isMobile()) {
-      setTimeout(() => {
-        showInstallBanner()
-      }, 3000) // Mostrar después de 3 segundos
-    }
   }
   
-  // Mostrar modal de instalación
-  const showInstallBanner = () => {
-    if (!canInstall.value || isInstalled.value) return
-    
-    showInstallModal.value = true
-  }
-  
-  // Cerrar modal de instalación
-  const closeInstallModal = () => {
-    showInstallModal.value = false
-  }
-  
-  // Instalar la aplicación
-  const installApp = async () => {
-    if (!installPrompt.value) {
-      console.log('❌ No hay prompt de instalación disponible')
-      return false
-    }
-    
-    try {
-      // Cerrar modal primero
-      showInstallModal.value = false
-      
-      console.log('📱 Mostrando prompt de instalación...')
-      const result = await installPrompt.value.prompt()
-      console.log('📊 Resultado de instalación:', result.outcome)
-      
-      if (result.outcome === 'accepted') {
-        console.log('✅ Usuario aceptó la instalación')
-        addNotification('¡Aplicación instalada exitosamente!', 'success', 5000)
-        canInstall.value = false
-        installPrompt.value = null
-        
-        // Verificar estado después de un pequeño delay
-        setTimeout(checkIfInstalled, 2000)
-        return true
-      } else {
-        console.log('❌ Usuario rechazó la instalación')
-        addNotification('Instalación cancelada. Puedes instalar más tarde desde el menú del navegador.', 'info', 5000)
-        return false
-      }
-    } catch (error) {
-      console.error('❌ Error en instalación:', error)
-      addNotification('Error durante la instalación', 'error')
-      return false
-    }
-  }
   
   // Verificar si es dispositivo móvil
   const isMobile = () => {
@@ -182,12 +153,6 @@ export function usePWA() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent)
   }
   
-  // Mostrar modal para iOS
-  const showIOSInstructions = () => {
-    if (isIOS() && !isInstalled.value) {
-      showInstallModal.value = true
-    }
-  }
   
   // Manejar cambios de conectividad
   const handleOnline = () => {
@@ -240,10 +205,6 @@ export function usePWA() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     
-    // Mostrar instrucciones para iOS si es necesario
-    if (isIOS() && !isInstalled.value) {
-      setTimeout(showIOSInstructions, 5000)
-    }
     
     console.log('✅ PWA inicializado')
     console.log('📱 Dispositivo móvil:', isMobile())
@@ -268,14 +229,9 @@ export function usePWA() {
     isStandalone,
     isOnline,
     updateAvailable,
-    showInstallModal,
     
     // Métodos
-    installApp,
     updateApp,
-    showInstallBanner,
-    closeInstallModal,
-    showIOSInstructions,
     isMobile,
     isIOS,
     checkIfInstalled,
