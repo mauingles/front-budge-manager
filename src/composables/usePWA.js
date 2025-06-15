@@ -39,19 +39,28 @@ export function usePWA() {
   
   // Verificar si debemos redirigir a la PWA instalada
   const checkForPWARedirect = () => {
-    // Solo mostrar banner si:
+    console.log('🔍 Verificando si mostrar modal PWA redirect...')
+    console.log('📱 isInstalled:', isInstalled.value)
+    console.log('🖥️ isStandalone:', isStandalone.value)
+    console.log('⚙️ shouldRedirectToPWA:', shouldRedirectToPWA())
+    
+    // Solo mostrar modal si:
     // 1. La PWA está instalada
     // 2. Estamos en el navegador (no en modo standalone)
     // 3. El usuario no ha deshabilitado el redirect
-    // 4. El banner no fue cerrado en esta sesión
-    const bannerClosed = sessionStorage.getItem('pwa-banner-closed')
+    // 4. El modal no fue cerrado en esta sesión
+    const modalClosed = sessionStorage.getItem('pwa-modal-closed')
+    console.log('❌ modalClosed:', modalClosed)
     
-    if (isInstalled.value && !isStandalone.value && shouldRedirectToPWA() && !bannerClosed) {
-      // Mostrar banner persistente en lugar de notificación temporal
+    if (isInstalled.value && !isStandalone.value && shouldRedirectToPWA() && !modalClosed) {
+      console.log('✅ Mostrando modal PWA redirect')
+      // Mostrar modal persistente
       showPWABanner.value = true
       
       // También mostrar notificación la primera vez
       showPWARedirectPrompt()
+    } else {
+      console.log('❌ No mostrando modal PWA redirect')
     }
   }
   
@@ -259,11 +268,18 @@ export function usePWA() {
     addNotification('Banner PWA habilitado', 'success', 3000)
   }
   
-  // Cerrar banner temporalmente (se vuelve a mostrar en la próxima visita)
+  // Cerrar modal temporalmente (se vuelve a mostrar en la próxima visita)
   const closePWABanner = () => {
     showPWABanner.value = false
     // Guardar que se cerró para no molestarlo en esta sesión
-    sessionStorage.setItem('pwa-banner-closed', 'true')
+    sessionStorage.setItem('pwa-modal-closed', 'true')
+  }
+  
+  // Función de prueba para forzar mostrar el modal (temporal para debug)
+  const forceShowPWAModal = () => {
+    console.log('🧪 Forzando mostrar modal PWA para prueba')
+    sessionStorage.removeItem('pwa-modal-closed')
+    showPWABanner.value = true
   }
   
   // Registrar Service Worker
@@ -551,6 +567,7 @@ export function usePWA() {
     enablePWARedirect,
     shouldRedirectToPWA,
     closePWABanner,
-    getPWAOpenInstructions
+    getPWAOpenInstructions,
+    forceShowPWAModal
   }
 }

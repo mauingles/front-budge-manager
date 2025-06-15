@@ -1,21 +1,33 @@
 <template>
   <Teleport to="body">
-    <div v-if="show" class="pwa-banner">
-      <div class="pwa-banner-content">
-        <div class="pwa-banner-icon">📱</div>
-        <div class="pwa-banner-text">
-          <div class="pwa-banner-title">¡Aplicación instalada!</div>
-          <div class="pwa-banner-message">{{ instructions }}</div>
-        </div>
-        <div class="pwa-banner-actions">
-          <button @click="$emit('redirect')" class="pwa-banner-redirect" title="Abrir aplicación">
-            🚀 Abrir
-          </button>
-          <button @click="$emit('close')" class="pwa-banner-close" title="Cerrar">
+    <!-- Modal overlay -->
+    <div v-if="show" class="pwa-modal-overlay" @click="$emit('close')">
+      <!-- Modal content -->
+      <div class="pwa-modal" @click.stop>
+        <!-- Header -->
+        <div class="pwa-modal-header">
+          <div class="pwa-modal-icon">📱</div>
+          <h3 class="pwa-modal-title">¡Aplicación instalada!</h3>
+          <button @click="$emit('close')" class="pwa-modal-close" title="Cerrar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18"/>
               <path d="M6 6l12 12"/>
             </svg>
+          </button>
+        </div>
+        
+        <!-- Body -->
+        <div class="pwa-modal-body">
+          <p class="pwa-modal-message">{{ instructions }}</p>
+        </div>
+        
+        <!-- Footer -->
+        <div class="pwa-modal-footer">
+          <button @click="$emit('close')" class="btn btn-secondary">
+            Más tarde
+          </button>
+          <button @click="$emit('redirect')" class="btn btn-primary">
+            🚀 Abrir aplicación
           </button>
         </div>
       </div>
@@ -39,136 +51,177 @@ defineEmits(['close', 'redirect'])
 </script>
 
 <style scoped>
-.pwa-banner {
+/* Modal overlay */
+.pwa-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1500;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  animation: slideDown 0.3s ease;
-}
-
-.pwa-banner-content {
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  max-width: 1200px;
-  margin: 0 auto;
-  gap: 12px;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
 }
 
-.pwa-banner-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.pwa-banner-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.pwa-banner-title {
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 2px;
-}
-
-.pwa-banner-message {
-  font-size: 0.8rem;
-  opacity: 0.9;
-  line-height: 1.3;
-}
-
-.pwa-banner-actions {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pwa-banner-redirect {
-  background: rgba(255, 255, 255, 0.9);
-  color: #667eea;
-  border: none;
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.pwa-banner-redirect:hover {
+/* Modal content */
+.pwa-modal {
   background: white;
-  transform: scale(1.05);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease;
 }
 
-.pwa-banner-close {
-  background: rgba(255, 255, 255, 0.2);
+/* Modal header */
+.pwa-modal-header {
+  display: flex;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+}
+
+.pwa-modal-icon {
+  font-size: 1.5rem;
+  margin-right: 12px;
+}
+
+.pwa-modal-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.pwa-modal-close {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
   border: none;
-  border-radius: 50%;
   width: 32px;
   height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: white;
+  color: #666;
   transition: all 0.2s ease;
 }
 
-.pwa-banner-close:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+.pwa-modal-close:hover {
+  background: #f5f5f5;
+  color: #333;
 }
 
-.pwa-banner-close svg {
+.pwa-modal-close svg {
   width: 16px;
   height: 16px;
 }
 
-@keyframes slideDown {
+/* Modal body */
+.pwa-modal-body {
+  padding: 20px 24px;
+}
+
+.pwa-modal-message {
+  margin: 0;
+  color: #666;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+/* Modal footer */
+.pwa-modal-footer {
+  padding: 16px 24px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  white-space: nowrap;
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.btn-secondary:hover {
+  background: #e8e8e8;
+  color: #333;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
   from {
-    transform: translateY(-100%);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
     opacity: 1;
   }
 }
 
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* Responsive design */
-@media (max-width: 768px) {
-  .pwa-banner-content {
-    padding: 10px 12px;
-    gap: 10px;
+@media (max-width: 480px) {
+  .pwa-modal {
+    margin: 20px;
+    max-width: calc(100vw - 40px);
   }
   
-  .pwa-banner-icon {
-    font-size: 1.3rem;
+  .pwa-modal-header,
+  .pwa-modal-body {
+    padding-left: 20px;
+    padding-right: 20px;
   }
   
-  .pwa-banner-title {
-    font-size: 0.85rem;
+  .pwa-modal-footer {
+    padding: 16px 20px 20px;
+    flex-direction: column;
   }
   
-  .pwa-banner-message {
-    font-size: 0.75rem;
-  }
-  
-  .pwa-banner-close {
-    width: 28px;
-    height: 28px;
-  }
-  
-  .pwa-banner-close svg {
-    width: 14px;
-    height: 14px;
+  .btn {
+    width: 100%;
   }
 }
 </style>
