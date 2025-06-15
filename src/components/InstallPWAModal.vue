@@ -34,16 +34,11 @@
           </div>
           
           <div class="install-actions">
-            <button v-if="!isIOS" class="install-btn" @click="handleInstall">
+            <button class="install-btn-modern" @click="handleInstallModern">
               🚀 Instalar Ahora
             </button>
-            <div v-else class="ios-instructions">
-              <p>📱 <strong>En iOS:</strong></p>
-              <p>1. Toca el botón <strong>compartir</strong> (↗️)</p>
-              <p>2. Selecciona <strong>"Agregar a pantalla de inicio"</strong></p>
-            </div>
             <button class="later-btn" @click="handleClose">
-              {{ isIOS ? 'Entendido' : 'Más tarde' }}
+              Más tarde
             </button>
           </div>
           
@@ -54,14 +49,22 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import PWAInstall from 'pwa-install'
 
 const props = defineProps(['show'])
 const emit = defineEmits(['close', 'install'])
 
+let pwaInstall = null
+
 // Detectar iOS
 const isIOS = computed(() => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
+})
+
+onMounted(() => {
+  // Inicializar PWAInstall
+  pwaInstall = new PWAInstall()
 })
 
 const handleClose = () => {
@@ -70,6 +73,17 @@ const handleClose = () => {
 
 const handleInstall = () => {
   emit('install')
+}
+
+const handleInstallModern = () => {
+  if (pwaInstall) {
+    // Usar la librería para mostrar el prompt
+    pwaInstall.showInstallPrompt()
+    handleClose()
+  } else {
+    // Fallback al método original
+    handleInstall()
+  }
 }
 </script>
 
@@ -212,6 +226,29 @@ const handleInstall = () => {
 }
 
 .install-btn:active {
+  transform: translateY(0);
+}
+
+.install-btn-modern {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  width: 100%;
+}
+
+.install-btn-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.install-btn-modern:active {
   transform: translateY(0);
 }
 
