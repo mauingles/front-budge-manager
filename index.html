@@ -119,6 +119,17 @@
     
     <!-- PWA Install Script -->
     <script>
+      // Capturar evento beforeinstallprompt temprano para PWA install
+      window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('💾 Capturando beforeinstallprompt temprano');
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        // Guardar evento para usar luego
+        window.promptEvent = e;
+      });
+      
       // Registrar Service Worker de forma inmediata
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

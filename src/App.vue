@@ -169,15 +169,16 @@
     <!-- PWA Install Component -->
     <pwa-install
       ref="pwaInstallRef"
-      manual-chrome="false"
-      manual-apple="false"
+      manual-chrome="true"
+      manual-apple="true"
+      manifest-url="/site.webmanifest"
       install-description="¡Instala Budget Manager para acceso rápido desde tu escritorio!"
-      name="Budget Manager"
-      description="Gestiona tu presupuesto de forma fácil y rápida"
       disable-screenshots="true"
+      use-local-storage="true"
       @pwa-install-success-event="handlePWAInstallSuccess"
       @pwa-install-fail-event="handlePWAInstallFail"
       @pwa-user-choice-result-event="handlePWAUserChoice"
+      @pwa-install-available-event="handlePWAInstallAvailable"
     ></pwa-install>
   </AppLayout>
 </template>
@@ -1853,6 +1854,7 @@ const processInvitation = (inviteCode) => {
 
 // PWA Install Handlers
 const pwaInstallRef = ref(null)
+const pwaInstallAvailable = ref(false)
 
 const handlePWAInstallSuccess = (event) => {
   console.log('PWA Install Success:', event.detail.message)
@@ -1868,6 +1870,26 @@ const handlePWAUserChoice = (event) => {
   console.log('PWA User Choice:', event.detail.message)
   if (event.detail.message === 'dismissed') {
     addNotification('Instalación cancelada. Puedes instalar más tarde desde el menú del navegador.', 'info', 5000)
+  }
+}
+
+const handlePWAInstallAvailable = (event) => {
+  console.log('PWA Install Available:', event.detail)
+  pwaInstallAvailable.value = true
+  
+  // Pasar el evento capturado tempranamente al componente
+  if (window.promptEvent && pwaInstallRef.value) {
+    pwaInstallRef.value.externalPromptEvent = window.promptEvent
+  }
+  
+  // Mostrar el modal después de un delay si no está instalado
+  if (!isInstalled.value && !isStandalone.value) {
+    setTimeout(() => {
+      if (pwaInstallRef.value && pwaInstallAvailable.value) {
+        console.log('Mostrando modal PWA install')
+        pwaInstallRef.value.showDialog()
+      }
+    }, 3000) // Mostrar después de 3 segundos
   }
 }
 </script>
