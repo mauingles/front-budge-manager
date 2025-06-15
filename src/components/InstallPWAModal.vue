@@ -10,38 +10,19 @@
         </button>
         
         <div class="install-modal-content">
-          <div class="install-icon">
-            📱
-          </div>
+          <pwa-install
+            ref="pwaInstallRef"
+            install-description="¡Instala Budget Manager para acceso rápido!"
+            name="Budget Manager"
+            description="Gestiona tu presupuesto de forma fácil y rápida"
+            @pwa-install-success-event="handleInstallSuccess"
+            @pwa-install-fail-event="handleInstallFail"
+            @pwa-user-choice-result-event="handleUserChoice"
+          ></pwa-install>
           
-          <h2 class="install-title">
-            ¡Instala Budget Manager!
-          </h2>
-          
-          <div class="install-benefits">
-            <div class="benefit-item">
-              <span class="benefit-icon">⚡</span>
-              <span>Acceso instantáneo desde tu pantalla de inicio</span>
-            </div>
-            <div class="benefit-item">
-              <span class="benefit-icon">📶</span>
-              <span>Funciona sin conexión a internet</span>
-            </div>
-            <div class="benefit-item">
-              <span class="benefit-icon">🔒</span>
-              <span>Datos seguros y siempre disponibles</span>
-            </div>
-          </div>
-          
-          <div class="install-actions">
-            <button class="install-btn-modern" @click="handleInstallModern">
-              🚀 Instalar Ahora
-            </button>
-            <button class="later-btn" @click="handleClose">
-              Más tarde
-            </button>
-          </div>
-          
+          <button class="later-btn" @click="handleClose">
+            Más tarde
+          </button>
         </div>
       </div>
     </div>
@@ -49,41 +30,30 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
-import PWAInstall from 'pwa-install'
+import '@khmyznikov/pwa-install'
+import { ref } from 'vue'
 
 const props = defineProps(['show'])
 const emit = defineEmits(['close', 'install'])
 
-let pwaInstall = null
-
-// Detectar iOS
-const isIOS = computed(() => {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent)
-})
-
-onMounted(() => {
-  // Inicializar PWAInstall
-  pwaInstall = new PWAInstall()
-})
+const pwaInstallRef = ref(null)
 
 const handleClose = () => {
   emit('close')
 }
 
-const handleInstall = () => {
+const handleInstallSuccess = (event) => {
+  console.log('PWA Install Success:', event.detail.message)
   emit('install')
+  handleClose()
 }
 
-const handleInstallModern = () => {
-  if (pwaInstall) {
-    // Usar la librería para mostrar el prompt
-    pwaInstall.showInstallPrompt()
-    handleClose()
-  } else {
-    // Fallback al método original
-    handleInstall()
-  }
+const handleInstallFail = (event) => {
+  console.log('PWA Install Failed:', event.detail.message)
+}
+
+const handleUserChoice = (event) => {
+  console.log('User Choice:', event.detail.message)
 }
 </script>
 
