@@ -170,7 +170,8 @@
     <PWABanner 
       :show="showPWABanner"
       :instructions="getPWAOpenInstructions()"
-      @close="closePWABanner" />
+      @close="closePWABanner"
+      @redirect="handlePWARedirect" />
 
     <!-- PWA Install Component -->
     <pwa-install
@@ -230,7 +231,8 @@ const {
   isMobile,
   showPWABanner,
   closePWABanner,
-  getPWAOpenInstructions
+  getPWAOpenInstructions,
+  redirectToPWA
 } = usePWA()
 
 // Estado de conexión
@@ -1939,15 +1941,21 @@ const handlePWAInstallAvailable = (event) => {
     pwaInstallRef.value.externalPromptEvent = window.promptEvent
   }
   
-  // Mostrar el modal después de un delay si no está instalado
+  // Solo mostrar el modal si NO está instalado (evitar duplicados)
   if (!isInstalled.value && !isStandalone.value) {
     setTimeout(() => {
-      if (pwaInstallRef.value && pwaInstallAvailable.value) {
+      if (pwaInstallRef.value && pwaInstallAvailable.value && !isInstalled.value) {
         console.log('Mostrando modal PWA install')
         pwaInstallRef.value.showDialog()
       }
     }, 3000) // Mostrar después de 3 segundos
   }
+}
+
+// Handler para el botón de redirect del banner
+const handlePWARedirect = () => {
+  console.log('🚀 Usuario solicita redirect a PWA')
+  redirectToPWA()
 }
 </script>
 

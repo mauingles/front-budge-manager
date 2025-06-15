@@ -35,5 +35,27 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "categories": ["finance", "productivity"],
-  "lang": "es"
+  "lang": "es",
+  "protocol_handlers": [
+    {
+      "protocol": "web+budgetmanager",
+      "url": "/?source=protocol&url=%s"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agregar Gasto",
+      "short_name": "Gasto",
+      "description": "Agregar un nuevo gasto",
+      "url": "/?action=add-expense",
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Agregar Ingreso", 
+      "short_name": "Ingreso",
+      "description": "Agregar un nuevo ingreso",
+      "url": "/?action=add-income",
+      "icons": [{ "src": "/web-app-manifest-192x192.png", "sizes": "192x192" }]
+    }
+  ]
 }

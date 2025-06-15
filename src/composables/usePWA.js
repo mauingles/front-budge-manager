@@ -74,14 +74,17 @@ export function usePWA() {
     
     localStorage.setItem('pwa-redirect-last-prompt', now.toString())
     
-    // Detectar el tipo de dispositivo para mostrar instrucciones específicas
-    const instructions = getPWAOpenInstructions()
-    
+    // Mostrar notificación y luego intentar redirect automático
     addNotification(
-      `📱 ${instructions}`,
+      '📱 Intentando abrir en la aplicación instalada...',
       'info',
-      8000
+      5000
     )
+    
+    // Ejecutar redirect después de un pequeño delay
+    setTimeout(() => {
+      redirectToPWA()
+    }, 2000)
   }
   
   // Obtener instrucciones específicas por plataforma
@@ -105,17 +108,129 @@ export function usePWA() {
     }
   }
   
-  // Redirigir a la PWA instalada (método mejorado)
+  // Redirigir a la PWA instalada (método agresivo)
   const redirectToPWA = () => {
     try {
-      console.log('🔄 Detectando PWA instalada...')
+      console.log('🔄 Intentando redirigir a PWA instalada...')
       
-      // En lugar de forzar el redirect, mostrar instrucciones específicas
-      showPWARedirectPrompt()
+      // Estrategia 1: Usar navigator.share si está disponible (funciona en algunos casos)
+      if (navigator.share && isMobile()) {
+        attemptPWARedirectViaShare()
+        return
+      }
+      
+      // Estrategia 2: Intentar con intent URLs en Android
+      if (navigator.userAgent.includes('Android')) {
+        attemptAndroidPWARedirect()
+        return
+      }
+      
+      // Estrategia 3: Usar custom protocol handlers
+      attemptProtocolRedirect()
       
     } catch (error) {
-      console.error('Error detectando PWA:', error)
+      console.error('Error redirigiendo a PWA:', error)
       showManualPWAOpenInstructions()
+    }
+  }
+  
+  // Estrategia 1: Usar Share API como trigger
+  const attemptPWARedirectViaShare = async () => {
+    try {
+      // Compartir a la propia app puede triggerear la apertura en PWA
+      await navigator.share({
+        title: 'Budget Manager',
+        text: 'Abriendo en la aplicación...',
+        url: window.location.origin
+      })
+    } catch (error) {
+      console.log('Share API falló, intentando método alternativo')
+      attemptProtocolRedirect()
+    }
+  }
+  
+  // Estrategia 2: Android Intent URLs
+  const attemptAndroidPWARedirect = () => {
+    try {
+      // Intent URL para Android
+      const intentUrl = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;category=android.intent.category.BROWSABLE;component=com.android.chrome/com.google.android.apps.chrome.webapps.WebappActivity;end`
+      
+      // Crear enlace invisible y hacer click
+      const link = document.createElement('a')
+      link.href = intentUrl
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Si no funciona en 2 segundos, mostrar fallback
+      setTimeout(() => {
+        if (!document.hidden) {
+          attemptProtocolRedirect()
+        }
+      }, 2000)
+      
+    } catch (error) {
+      console.log('Android intent falló, intentando protocolo personalizado')
+      attemptProtocolRedirect()
+    }
+  }
+  
+  // Estrategia 3: Protocol handlers y métodos alternativos
+  const attemptProtocolRedirect = () => {
+    try {
+      const currentUrl = window.location.href
+      
+      // Método 1: Intentar abrir con protocolo web+app
+      const protocolUrl = `web+budgetmanager://open?url=${encodeURIComponent(currentUrl)}`
+      window.location.href = protocolUrl
+      
+      // Método 2: Crear evento de teclado para simular Ctrl+Shift+A (abrir como app en Chrome)
+      setTimeout(() => {
+        if (navigator.userAgent.includes('Chrome') && !isMobile()) {
+          simulateAppShortcut()
+        }
+      }, 1000)
+      
+      // Método 3: Forzar reload con parámetros PWA
+      setTimeout(() => {
+        if (!document.hidden) {
+          const pwaUrl = `${window.location.origin}/?pwa=true&timestamp=${Date.now()}`
+          window.location.replace(pwaUrl)
+        }
+      }, 3000)
+      
+    } catch (error) {
+      console.log('Redirect por protocolo falló, mostrando instrucciones')
+      showManualPWAOpenInstructions()
+    }
+  }
+  
+  // Simular atajo de teclado para abrir como app (Chrome desktop)
+  const simulateAppShortcut = () => {
+    try {
+      // Crear eventos de teclado
+      const keydownEvent = new KeyboardEvent('keydown', {
+        key: 'a',
+        code: 'KeyA',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true
+      })
+      
+      const keyupEvent = new KeyboardEvent('keyup', {
+        key: 'a',
+        code: 'KeyA',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true
+      })
+      
+      document.dispatchEvent(keydownEvent)
+      document.dispatchEvent(keyupEvent)
+      
+    } catch (error) {
+      console.log('Simulación de atajo falló')
     }
   }
   
@@ -277,8 +392,17 @@ export function usePWA() {
   const handleBeforeInstallPrompt = (event) => {
     console.log('💾 Evento beforeinstallprompt capturado')
     event.preventDefault()
-    installPrompt.value = event
-    canInstall.value = true
+    
+    // Solo permitir instalación si NO está ya instalada
+    if (!isInstalled.value && !isStandalone.value) {
+      installPrompt.value = event
+      canInstall.value = true
+      console.log('✅ PWA puede instalarse - no está instalada actualmente')
+    } else {
+      console.log('❌ PWA ya está instalada - bloqueando prompt de instalación')
+      canInstall.value = false
+      installPrompt.value = null
+    }
   }
   
   
@@ -310,6 +434,19 @@ export function usePWA() {
     isInstalled.value = true
     canInstall.value = false
     installPrompt.value = null
+    
+    // Ocultar banner de redirect si se muestra (ya no es necesario)
+    showPWABanner.value = false
+    
+    // Limpiar cualquier prompt pendiente
+    if (window.promptEvent) {
+      window.promptEvent = null
+    }
+    
+    // Verificar estado después de instalación
+    setTimeout(() => {
+      checkIfInstalled()
+    }, 1000)
   }
   
   // Verificar características de PWA
@@ -345,6 +482,21 @@ export function usePWA() {
         swRegistration.value.update()
       }
     }, 60000)
+    
+    // Verificación periódica del estado de instalación cada 10 segundos
+    setInterval(() => {
+      const wasInstalled = isInstalled.value
+      checkIfInstalled()
+      
+      // Si el estado cambió, limpiar prompts
+      if (wasInstalled !== isInstalled.value) {
+        console.log('🔄 Estado de instalación cambió:', isInstalled.value ? 'Instalada' : 'No instalada')
+        if (isInstalled.value) {
+          canInstall.value = false
+          installPrompt.value = null
+        }
+      }
+    }, 10000)
     
     // Event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)

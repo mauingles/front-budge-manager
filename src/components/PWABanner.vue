@@ -8,6 +8,9 @@
           <div class="pwa-banner-message">{{ instructions }}</div>
         </div>
         <div class="pwa-banner-actions">
+          <button @click="$emit('redirect')" class="pwa-banner-redirect" title="Abrir aplicación">
+            🚀 Abrir
+          </button>
           <button @click="$emit('close')" class="pwa-banner-close" title="Cerrar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18"/>
@@ -32,7 +35,7 @@ defineProps({
   }
 })
 
-defineEmits(['close'])
+defineEmits(['close', 'redirect'])
 </script>
 
 <style scoped>
@@ -81,6 +84,27 @@ defineEmits(['close'])
 
 .pwa-banner-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pwa-banner-redirect {
+  background: rgba(255, 255, 255, 0.9);
+  color: #667eea;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.pwa-banner-redirect:hover {
+  background: white;
+  transform: scale(1.05);
 }
 
 .pwa-banner-close {
