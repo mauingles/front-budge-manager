@@ -168,14 +168,10 @@ export function usePWA() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent)
   }
   
-  // Mostrar instrucciones para iOS
+  // Mostrar modal para iOS
   const showIOSInstructions = () => {
     if (isIOS() && !isInstalled.value) {
-      addNotification(
-        '📱 En iOS: Toca el botón compartir (↗️) y selecciona "Agregar a pantalla de inicio"',
-        'info',
-        12000
-      )
+      showInstallModal.value = true
     }
   }
   

@@ -34,11 +34,16 @@
           </div>
           
           <div class="install-actions">
-            <button class="install-btn" @click="handleInstall">
+            <button v-if="!isIOS" class="install-btn" @click="handleInstall">
               🚀 Instalar Ahora
             </button>
+            <div v-else class="ios-instructions">
+              <p>📱 <strong>En iOS:</strong></p>
+              <p>1. Toca el botón <strong>compartir</strong> (↗️)</p>
+              <p>2. Selecciona <strong>"Agregar a pantalla de inicio"</strong></p>
+            </div>
             <button class="later-btn" @click="handleClose">
-              Más tarde
+              {{ isIOS ? 'Entendido' : 'Más tarde' }}
             </button>
           </div>
           
@@ -52,10 +57,15 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted, computed } from 'vue'
 
 const props = defineProps(['show'])
 const emit = defineEmits(['close', 'install'])
+
+// Detectar iOS
+const isIOS = computed(() => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+})
 
 const countdown = ref(6)
 let countdownInterval = null
@@ -258,6 +268,30 @@ onUnmounted(() => {
 .later-btn:hover {
   border-color: rgba(100, 116, 139, 0.5);
   color: #475569;
+}
+
+.ios-instructions {
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.ios-instructions p {
+  margin: 8px 0;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.ios-instructions p:first-child {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.ios-instructions strong {
+  color: #1d4ed8;
 }
 
 .install-timer {
